@@ -1,0 +1,6 @@
+pyautogui>=0.9.54
+opencv-python>=4.8
+mss>=9.0
+PyYAML>=6.0
+keyboard>=0.13.5
+numpy>=1.24

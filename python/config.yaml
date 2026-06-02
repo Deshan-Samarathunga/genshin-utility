@@ -1,0 +1,68 @@
+# ============================================================
+# Genshin Impact — Batch Artifact Remover Configuration
+# ============================================================
+# All coordinates are for 1920×1080 borderless windowed.
+# Adjust values if your setup differs.
+# Use  python batch_artifact_remover.py --calibrate  to verify.
+# ============================================================
+
+# --- General ---
+character_count: 77
+start_hotkey: "F7"
+stop_hotkey: "F9"
+
+# --- Resolution ---
+screen_width: 1920
+screen_height: 1080
+
+# --- Template Matching ---
+match_threshold: 0.75
+template_dir: "assets/templates"
+
+# --- Sidebar Region (for detecting if we're on the Artifacts tab) ---
+# (x1, y1, x2, y2) — must be wide/tall enough to contain the template
+sidebar_region: [20, 60, 420, 520]
+
+# Click position for "Artifacts" tab text on the left sidebar
+artifacts_tab_click: [170, 295]
+
+# --- Character Navigation ---
+# Right arrow ">" to go to the next character
+character_right_arrow: [1840, 594]
+
+# --- Artifact Detail View: Type Tabs ---
+# The 5 artifact-type icons at the TOP-LEFT of the detail view.
+# Spacing between icons is ~69 px at 1920×1080.
+# After entering the detail view, click each tab and check for Remove.
+artifact_type_tabs:
+  - [55, 40]      # Flower of Life
+  - [124, 40]     # Plume of Death
+  - [193, 40]     # Sands of Eon
+  - [262, 40]     # Goblet of Eonothem
+  - [331, 40]     # Circlet of Logos
+
+# --- Ring Entry Clicks ---
+# Positions to click on the Artifacts ring view to enter the detail view.
+# These should land on the golden artifact circles around the character.
+# The script tries each in order until the detail view opens.
+ring_entry_clicks:
+  - [360, 415]    # upper-left of ring
+  - [285, 580]    # left of ring
+  - [490, 775]    # bottom of ring
+  - [1070, 410]   # upper-right of ring
+  - [1170, 635]   # lower-right of ring
+
+# --- Remove Button ---
+# Fixed-coordinate fallback (used when template is unavailable)
+remove_button_pos: [1558, 1002]
+# Region to search for the Remove button template (x1, y1, x2, y2)
+remove_button_search_region: [1360, 900, 1880, 1080]
+
+# --- Timing (milliseconds) ---
+after_character_switch_ms: 800
+after_tab_click_ms: 500
+after_type_tab_switch_ms: 400
+after_slot_click_ms: 700
+after_remove_click_ms: 500
+after_remove_wait_ms: 400
+poll_interval_ms: 100
