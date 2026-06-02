@@ -38,9 +38,9 @@ F7:: {
     ; Step 2: Click each panel item then remove
     for item in panelItems {
         ClickAt(item[1], item[2])
-        Sleep 80
+        Sleep 200
         ClickAt(removeBtn[1], removeBtn[2])
-        Sleep 80
+        Sleep 200
     }
 
     ; Step 3: Back button
@@ -51,6 +51,16 @@ F7:: {
     ; Step 4: Next button
     nextBtn := [1840, 536]
     ClickAt(nextBtn[1], nextBtn[2])
+}
+
+; ── Left Arrow: Previous character ──
+Left:: {
+    ClickAt(68, 535)
+}
+
+; ── Right Arrow: Next character ──
+Right:: {
+    ClickAt(1840, 536)
 }
 
 #HotIf
