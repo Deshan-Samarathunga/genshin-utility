@@ -1,0 +1,71 @@
+# ============================================================
+# Genshin Impact — Keyboard-less Voice Chat (PS5 DualSense)
+# ============================================================
+# Used by genshin_voice_chat.py. Every key here is optional —
+# anything you omit falls back to the script's built-in default.
+#
+#   python genshin_voice_chat.py --list-audio   # find your mic
+#   python genshin_voice_chat.py                # run
+# ============================================================
+
+# --- Voice activation -----------------------------------------------
+# "toggle"       = press the voice button once to start, again to stop
+# "push_to_talk" = hold the voice button to dictate, release to stop
+voice_mode: "toggle"
+
+# --- Controller button map ------------------------------------------
+# Map each logical action to a DualSense button by NAME. To remap,
+# just change the name on the right.
+#
+# Valid button names:
+#   touchpad   mic        share (= create)   options   ps
+#   l1  r1  l2  r2  l3 (left stick click)  r3 (right stick click)
+#   cross  circle  square  triangle
+#   dpad_up  dpad_down  dpad_left  dpad_right
+#
+# NOTE: a mapped button STILL triggers its normal in-game action too
+# (user-space tools can't block it). Stick to chat-safe buttons —
+# touchpad, options, share, stick-clicks, mic — not movement/attack.
+buttons:
+  voice: "touchpad"     # start/stop voice dictation
+  space: "l3"           # insert a space
+  backspace: "r3"       # delete last character (hold to repeat)
+  clear: "share"        # clear the whole chat box
+  submit: "options"     # send the message (Enter)
+  quit: "mic"           # hold ~1.2s to exit the script
+
+# --- Speech-to-text (faster-whisper) --------------------------------
+# Models, smallest→best:  tiny.en  base.en  small.en  medium.en
+# CPU users: keep compute_type "int8". GPU users: device "cuda",
+# compute_type "float16".
+whisper_model: "base.en"
+whisper_device: "cpu"
+whisper_compute_type: "int8"
+language: "en"
+
+# --- Microphone -----------------------------------------------------
+# Substring of the input device name. The DualSense's built-in mic
+# usually appears as "Wireless Controller". Use --list-audio to check.
+# Set to "" to use the Windows default microphone instead.
+mic_name_contains: "Wireless Controller"
+
+# --- Window gating (the #IfWinActive equivalent) --------------------
+only_when_genshin_focused: true
+genshin_title_contains:
+  - "genshin"
+  - "原神"
+
+# --- Clearing the chat box ------------------------------------------
+clear_use_select_all: true   # Ctrl+A then Backspace (recommended)
+clear_backspaces: 60         # used only when the above is false
+
+# --- Backspace hold-to-repeat ---------------------------------------
+backspace_repeat_delay: 0.35     # seconds held before auto-repeat starts
+backspace_repeat_interval: 0.06  # seconds between repeats
+
+# --- Feel / feedback ------------------------------------------------
+poll_hz: 120              # controller poll rate
+haptics: true             # rumble feedback on actions
+led_feedback: true        # LED colour reflects state
+type_char_delay: 0.0      # delay between injected characters (0 = fastest)
+stop_voice_on_submit: true

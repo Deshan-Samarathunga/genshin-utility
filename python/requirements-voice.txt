@@ -1,0 +1,8 @@
+# Dependencies for genshin_voice_chat.py (DualSense voice chat).
+# Kept separate from requirements.txt so the artifact remover is unaffected.
+#   pip install -r requirements-voice.txt
+pydualsense>=0.7.3      # DualSense HID input + LED/haptics (pulls hidapi)
+faster-whisper>=1.0.0   # offline speech-to-text
+sounddevice>=0.4.6      # microphone capture (bundles PortAudio on Windows)
+numpy>=1.24
+PyYAML>=6.0
