@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Genshin Impact Utility</title>
+    <!-- Google Fonts for modern typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script type="module" src="/main.js" defer></script>
+  </head>
+  <body>
+    <div class="app-container">
+      <header>
+        <p class="instructions">
+          <strong>INSTRUCTIONS:</strong> Click the sharp switch to the right to <strong>START</strong> the script. Click it back to the left to <strong>STOP</strong> it.
+        </p>
+      </header>
+
+      <main class="scripts-list">
+        <!-- Script 1 -->
+        <div class="script-card">
+          <div class="script-info">
+            <h2>Batch Artifact Remover</h2>
+            <p>Automatically clears trash artifacts</p>
+            <p class="hotkey-hint"><strong>Hotkeys:</strong> Press <kbd>F7</kbd> to clear artifacts, <kbd>Left</kbd> / <kbd>Right</kbd> to change characters.</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="toggle-artifact" data-script="genshin_batch_artifact remover.ahk">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- Script 2 -->
+        <div class="script-card">
+          <div class="script-info">
+            <h2>Auto Dialogue</h2>
+            <p>Automatically skips long story dialogues</p>
+            <p class="hotkey-hint"><strong>Hotkey:</strong> Press <kbd>F4</kbd> in-game to start/stop.</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="toggle-dialogue" data-script="auto_dialogue.ahk">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- Script 3 -->
+        <div class="script-card">
+          <div class="script-info">
+            <h2>PS5 Voice Chat</h2>
+            <p>Speak to type in co-op chat using DualSense</p>
+            <p class="hotkey-hint"><strong>Hotkeys:</strong> <kbd>Touchpad</kbd> (Voice), <kbd>L3</kbd> (Space), <kbd>R3</kbd> (Backspace), <kbd>Options</kbd> (Send).</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="toggle-voice" data-script="ps5_voice_typing.ahk">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </main>
+
+
+    </div>
+  </body>
+</html>

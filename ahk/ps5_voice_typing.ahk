@@ -62,8 +62,8 @@ Btn_Submit    := 10   ; Options          -> send the message (Enter)
 VoiceMode := "Toggle"        ; "Toggle"     = press once to start, again to stop
                              ; "PushToTalk" = hold to dictate, release to stop
 
-ClearUseSelectAll := true    ; true  = Ctrl+A then Backspace (fast, clean)
-                             ; false = send a burst of Backspaces instead
+ClearUseSelectAll := false   ; false = send a burst of Backspaces instead (Genshin does not support Ctrl+A)
+                             ; true  = Ctrl+A then Backspace (fast, clean)
 ClearBackspaces   := 60      ; used only when ClearUseSelectAll = false
 
 StopVoiceOnSubmit := true    ; close the Win+H panel just before sending

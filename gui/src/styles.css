@@ -1,0 +1,176 @@
+:root {
+  --canvas: #181818;
+  --canvas-elevated: #303030;
+  --primary: #10b981; /* Emerald green */
+  --primary-active: #059669;
+  --ink: #ffffff;
+  --body: #969696;
+  --hairline: #303030;
+  
+  --spacing-xxs: 8px;
+  --spacing-xs: 16px;
+  --spacing-sm: 24px;
+  --spacing-md: 32px;
+  --spacing-lg: 48px;
+  --spacing-xl: 64px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', -apple-system, system-ui, sans-serif;
+  background-color: var(--canvas);
+  color: var(--ink);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+header {
+  padding: var(--spacing-sm) var(--spacing-md);
+  text-align: center;
+  border-bottom: 1px solid var(--hairline);
+  background-color: var(--canvas);
+}
+
+.instructions {
+  margin-top: 0;
+  font-size: 13px; /* body-sm */
+  color: var(--body);
+  background-color: var(--canvas-elevated);
+  padding: var(--spacing-sm);
+  border-radius: 0px; /* SHARP */
+  border: 1px solid var(--hairline);
+}
+
+.instructions strong {
+  color: var(--ink);
+}
+
+.scripts-list {
+  flex: 1;
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  overflow-y: auto;
+}
+
+.script-card {
+  background-color: var(--canvas-elevated);
+  padding: var(--spacing-sm);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: 0px; /* SHARP */
+  border: 1px solid var(--hairline);
+  flex-shrink: 0;
+}
+
+.script-info h2 {
+  font-size: 18px; /* title-md */
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0;
+  color: var(--ink);
+  margin-bottom: var(--spacing-xxs);
+}
+
+.script-info p {
+  font-size: 14px; /* body-md */
+  color: var(--body);
+  margin: 0;
+}
+
+.hotkey-hint {
+  margin-top: var(--spacing-xs) !important;
+  color: var(--body) !important;
+  font-size: 13px !important;
+}
+
+kbd {
+  background-color: var(--canvas);
+  border: 1px solid var(--hairline);
+  color: var(--ink);
+  border-radius: 0px; /* SHARP */
+  display: inline-block;
+  font-size: 11px; /* caption-uppercase */
+  font-weight: 600;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  margin: 0 4px;
+}
+
+/* Sharp Ferrari Toggle Button */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 56px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--canvas);
+  border: 1px solid var(--hairline);
+  transition: .2s;
+  border-radius: 0px; /* SHARP */
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  bottom: 3px;
+  background-color: var(--body);
+  transition: .2s;
+  border-radius: 0px; /* SHARP */
+}
+
+input:checked + .slider {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+input:checked + .slider:before {
+  transform: translateX(28px);
+  background-color: var(--ink);
+}
+
+input:active + .slider {
+  background-color: var(--primary-active);
+}
+
+.status-bar {
+  padding: var(--spacing-sm);
+  text-align: center;
+  font-size: 13px; /* body-sm */
+  color: var(--body);
+  border-top: 1px solid var(--hairline);
+  background-color: var(--canvas-elevated);
+}
