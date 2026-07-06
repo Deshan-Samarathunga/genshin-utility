@@ -1,26 +1,31 @@
 {
-  "name": "genshin-ahk-gui-v2",
+  "name": "genshin-impact-utility",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
+  "description": "Genshin Impact Utility by Frost — AutoHotkey automation scripts with an Electron GUI",
+  "author": "Frost",
   "main": "electron_main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --win --dir"
+    "build": "electron-builder --win"
   },
   "devDependencies": {
     "electron": "^43.0.0",
-    "electron-builder": "^25.1.8",
-    "electron-packager": "^17.1.2"
+    "electron-builder": "^25.1.8"
   },
   "build": {
-    "appId": "com.deshan.genshinutility",
-    "productName": "Genshin Impact Utility v2",
+    "appId": "com.frost.genshinutility",
+    "productName": "Genshin Impact Utility",
     "directories": {
       "output": "dist"
     },
     "win": {
-      "target": "dir",
-      "icon": "icon.png"
+      "target": "portable",
+      "icon": "icon.png",
+      "requestedExecutionLevel": "requireAdministrator"
+    },
+    "portable": {
+      "artifactName": "GenshinImpactUtility-${version}.exe"
     },
     "extraResources": [
       {

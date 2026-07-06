@@ -7,7 +7,7 @@
     <title>Genshin Impact Utility</title>
     <!-- Google Fonts for modern typography -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script type="module" src="/main.js" defer></script>
+    <script type="module" src="./main.js" defer></script>
   </head>
   <body>
     <div class="app-container">
@@ -26,7 +26,7 @@
             <p class="hotkey-hint"><strong>Hotkeys:</strong> Press <kbd>F7</kbd> to clear artifacts, <kbd>Left</kbd> / <kbd>Right</kbd> to change characters.</p>
           </div>
           <label class="switch">
-            <input type="checkbox" id="toggle-remover" data-script="genshin_batch_artifact remover.exe">
+            <input type="checkbox" id="toggle-remover" data-script="genshin_batch_artifact remover.ahk">
             <span class="slider"></span>
           </label>
         </div>
@@ -39,7 +39,7 @@
             <p class="hotkey-hint"><strong>Hotkey:</strong> Press <kbd>F4</kbd> in-game to start/stop.</p>
           </div>
           <label class="switch">
-            <input type="checkbox" id="toggle-dialogue" data-script="auto_dialogue.exe">
+            <input type="checkbox" id="toggle-dialogue" data-script="auto_dialogue.ahk">
             <span class="slider"></span>
           </label>
         </div>
@@ -52,13 +52,13 @@
             <p class="hotkey-hint"><strong>Hotkeys:</strong> <kbd>Touchpad</kbd> (Voice), <kbd>L3</kbd> (Space), <kbd>R3</kbd> (Backspace), <kbd>Options</kbd> (Send).</p>
           </div>
           <label class="switch">
-            <input type="checkbox" id="toggle-voice" data-script="ps5_voice_typing.exe">
+            <input type="checkbox" id="toggle-voice" data-script="ps5_voice_typing.ahk">
             <span class="slider"></span>
           </label>
         </div>
       </main>
 
-
+      <footer class="status-bar" id="status-bar">Ready</footer>
     </div>
   </body>
 </html>

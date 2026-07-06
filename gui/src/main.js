@@ -1,5 +1,11 @@
 const statusBar = document.getElementById('status-bar');
 
+// After a user-initiated toggle, skip automatic status polling for this
+// checkbox for a few seconds.  This prevents stale process-table data from
+// bouncing the toggle back before taskkill has fully taken effect.
+const cooldowns = new Map(); // data-script → timestamp
+const COOLDOWN_MS = 4000;
+
 function setStatus(msg) {
   if (!statusBar) return;
   statusBar.textContent = msg;
@@ -12,6 +18,11 @@ function setStatus(msg) {
 
 async function updateToggleState(checkbox) {
   const scriptName = checkbox.getAttribute('data-script');
+
+  // If this checkbox was just toggled by the user, skip the automatic poll
+  const cooldownUntil = cooldowns.get(scriptName) || 0;
+  if (Date.now() < cooldownUntil) return;
+
   try {
     const isRunning = await window.electronAPI.checkStatus(scriptName);
     if (checkbox.checked !== isRunning) {
@@ -27,6 +38,8 @@ async function handleToggle(event) {
   const scriptName = checkbox.getAttribute('data-script');
   
   checkbox.disabled = true; // prevent spam
+  // Set cooldown so the periodic poll doesn't override this user action
+  cooldowns.set(scriptName, Date.now() + COOLDOWN_MS);
   
   if (checkbox.checked) {
     try {

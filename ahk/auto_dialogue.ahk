@@ -1,29 +1,32 @@
+#Requires AutoHotkey v2.0
 #SingleInstance Force
 
 if not A_IsAdmin {
-    Run *RunAs "%A_AhkPath%" "%A_ScriptFullPath%"
+    try Run '*RunAs "' A_AhkPath '" "' A_ScriptFullPath '"'
     ExitApp
 }
+
 ; -----------------------------------------------------------------------------
-; Genshin Impact Custom Looter
-; Trigger Button: F4 (Press once to start, press again to stop)
+; Genshin Impact - Auto Dialogue / Custom Looter
+; Trigger: F4 (press once to start, press again to stop)
+; While running, it presses F and Space every second to advance dialogue / loot.
 ; -----------------------------------------------------------------------------
 
-$F4::
+Toggle := false
+
+$F4:: {
+    global Toggle
     Toggle := !Toggle
     if (Toggle) {
-        SetTimer, LootLoop, 1000  ; Sets a timer to run every 1000ms
-        Gosub, LootLoop           ; Runs immediately the first time
+        SetTimer LootLoop, 1000  ; run every 1000 ms
+        LootLoop()               ; and run once immediately
     } else {
-        SetTimer, LootLoop, Off   ; Turns the timer off when you press F4 again
+        SetTimer LootLoop, 0     ; turn the timer off
     }
-return
+}
 
-LootLoop:
-    ; Press F
-    Send, f
-    Sleep, 50
-    
-    ; Press Space
-    Send, {Space}
-return
+LootLoop() {
+    Send "f"
+    Sleep 50
+    Send "{Space}"
+}
