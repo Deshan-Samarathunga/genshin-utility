@@ -21,8 +21,7 @@
     },
     "win": {
       "target": "portable",
-      "icon": "icon.png",
-      "requestedExecutionLevel": "requireAdministrator"
+      "icon": "icon.png"
     },
     "portable": {
       "artifactName": "GenshinImpactUtility-${version}.exe"
