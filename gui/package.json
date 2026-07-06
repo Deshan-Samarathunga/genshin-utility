@@ -1,12 +1,35 @@
 {
-  "name": "genshin-ahk-gui",
+  "name": "genshin-ahk-gui-v2",
   "private": true,
   "version": "0.1.0",
   "main": "electron_main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "build": "electron-builder --win --dir"
   },
   "devDependencies": {
-    "electron": "^43.0.0"
+    "electron": "^43.0.0",
+    "electron-builder": "^25.1.8",
+    "electron-packager": "^17.1.2"
+  },
+  "build": {
+    "appId": "com.deshan.genshinutility",
+    "productName": "Genshin Impact Utility v2",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "dir",
+      "icon": "icon.png"
+    },
+    "extraResources": [
+      {
+        "from": "../ahk",
+        "to": "ahk",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ]
   }
 }

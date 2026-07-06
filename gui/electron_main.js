@@ -35,6 +35,8 @@ function createWindow() {
   });
 }
 
+app.setPath('userData', path.join(app.getPath('appData'), 'genshin-ahk-gui-v2'));
+
 app.whenReady().then(() => {
   createWindow();
 
@@ -71,8 +73,9 @@ app.on('window-all-closed', () => {
 
 ipcMain.handle('start-script', async (event, scriptName) => {
   return new Promise((resolve, reject) => {
-    // The ahk directory is at the root of the repo, gui is in a subfolder
-    const scriptPath = path.resolve(__dirname, '..', 'ahk', scriptName);
+    // In production, extraResources are placed in process.resourcesPath. In dev, they are in the parent directory.
+    const getAppPath = () => app.isPackaged ? process.resourcesPath : path.join(__dirname, '..');
+    const scriptPath = path.join(getAppPath(), 'ahk', scriptName);
     
     if (!fs.existsSync(scriptPath)) {
       return reject(`Script not found: ${scriptPath}`);
@@ -91,7 +94,7 @@ ipcMain.handle('start-script', async (event, scriptName) => {
 
 ipcMain.handle('stop-script', async (event, scriptName) => {
   return new Promise((resolve, reject) => {
-    const query = `commandline like '%${scriptName}%' and name like '%AutoHotkey%'`;
+    const query = `name='${scriptName}'`;
     exec(`wmic process where "${query}" call terminate`, (error, stdout) => {
       if (error) {
         reject(error.message);
@@ -108,7 +111,7 @@ ipcMain.handle('stop-script', async (event, scriptName) => {
 
 ipcMain.handle('check-status', async (event, scriptName) => {
   return new Promise((resolve, reject) => {
-    const query = `commandline like '%${scriptName}%' and name like '%AutoHotkey%'`;
+    const query = `name='${scriptName}'`;
     exec(`wmic process where "${query}" get processid`, (error, stdout) => {
       if (error) {
         resolve(false);

@@ -1,5 +1,9 @@
 #SingleInstance Force
 
+if not A_IsAdmin {
+    Run *RunAs "%A_AhkPath%" "%A_ScriptFullPath%"
+    ExitApp
+}
 ; -----------------------------------------------------------------------------
 ; Genshin Impact Custom Looter
 ; Trigger Button: F4 (Press once to start, press again to stop)

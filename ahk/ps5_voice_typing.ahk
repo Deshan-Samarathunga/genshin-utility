@@ -2,6 +2,11 @@
 #SingleInstance Force
 SendMode "Event"          ; Event mode is the most reliable for Genshin's text fields
 
+if not A_IsAdmin {
+    try Run '*RunAs "' A_AhkPath '" "' A_ScriptFullPath '"'
+    ExitApp
+}
+
 ; =====================================================================
 ;  Genshin Impact - Keyboard-less Voice Chat  (PS5 DualSense + AHK v2)
 ; =====================================================================

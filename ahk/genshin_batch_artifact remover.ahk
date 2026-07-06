@@ -1,6 +1,11 @@
 #Requires AutoHotkey v2.0
 #SingleInstance Force
 SendMode "Event"          ; often works better in games
+
+if not A_IsAdmin {
+    try Run '*RunAs "' A_AhkPath '" "' A_ScriptFullPath '"'
+    ExitApp
+}
 CoordMode "Mouse", "Screen"
 
 #HotIf IsGenshinActive()
