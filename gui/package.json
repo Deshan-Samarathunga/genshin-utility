@@ -17,14 +17,18 @@
     "appId": "com.frost.genshinutility",
     "productName": "Genshin Impact Utility",
     "directories": {
-      "output": "dist"
+      "output": "dist-installer"
     },
     "win": {
-      "target": "portable",
+      "target": "nsis",
       "icon": "icon.png"
     },
-    "portable": {
-      "artifactName": "GenshinImpactUtility-${version}.exe"
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "artifactName": "GenshinImpactUtility-Setup-${version}.exe"
     },
     "extraResources": [
       {
