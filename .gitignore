@@ -2,6 +2,6 @@ __pycache__/
 *.pyc
 .venv/
 venv/
-gui/node_modules/
-gui/dist/
-gui/dist-installer/
+tauri-gui/node_modules/
+tauri-gui/src-tauri/target/
+tauri-gui/dist/
