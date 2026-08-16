@@ -88,11 +88,19 @@ pub fn artifact_remover_next() {
 }
 
 pub async fn auto_message_run(state: std::sync::Arc<std::sync::Mutex<crate::state::MacroState>>, text: String, count: u32) {
-    let mut enigo = Enigo::new(&Settings::default()).unwrap();
+    let _enigo = Enigo::new(&Settings::default()).unwrap();
     
     let loop_count = if count == 0 { 1 } else { count };
+    let chat_y_coords = [167, 290, 416, 542, 668, 792, 917];
     
-    for _ in 0..loop_count {
+    // 1 page = 7 friends. 
+    // Through testing, 49 notches is slightly too much (drifts up), 48 is too little.
+    // The exact scroll distance is roughly 48.6 notches per page.
+    // We will accumulate the exact fractional amount to prevent long-term drift.
+    let mut accumulated_scroll: f32 = 0.0;
+    let exact_notches_per_page = 48.61;
+    
+    for i in 0..loop_count {
         {
             let guard = state.lock().unwrap();
             if !guard.auto_message_active {
@@ -100,29 +108,31 @@ pub async fn auto_message_run(state: std::sync::Arc<std::sync::Mutex<crate::stat
             }
         }
 
-        // 1. Click chat icon upper right
-        click_at(1726, 166);
+        let page_index = (i % 7) as usize;
+        let y_coord = chat_y_coords[page_index];
+
+        // 1. Click chat icon on the current row
+        click_at(1721, y_coord);
         sleep(Duration::from_millis(500)).await;
         
-        // 2. Select chat
+        // 2. Select chat box
         click_at(441, 1001);
         sleep(Duration::from_millis(500)).await;
         
         // 3. Paste the text
         if let Ok(mut clipboard) = Clipboard::new() {
             let saved_clip = clipboard.get_text().unwrap_or_default();
-            let _ = clipboard.set_text(&text);
-            sleep(Duration::from_millis(100)).await;
-            // Send Ctrl+V using native Windows API
+            clipboard.set_text(text.clone()).unwrap();
+            
             unsafe {
                 keybd_event(VK_CONTROL.0 as u8, 0, KEYBD_EVENT_FLAGS(0), 0);
-                keybd_event(VK_V.0 as u8, 0, KEYBD_EVENT_FLAGS(0), 0);
-                std::thread::sleep(Duration::from_millis(50));
+                keybd_event(VK_V.0 as u8, 0, KEYBD_EVENT_FLAGS(0), 0); // V
+                sleep(Duration::from_millis(50)).await;
                 keybd_event(VK_V.0 as u8, 0, KEYEVENTF_KEYUP, 0);
                 keybd_event(VK_CONTROL.0 as u8, 0, KEYEVENTF_KEYUP, 0);
             }
+            sleep(Duration::from_millis(500)).await;
             
-            sleep(Duration::from_millis(200)).await;
             let _ = clipboard.set_text(saved_clip);
         }
         
@@ -130,22 +140,26 @@ pub async fn auto_message_run(state: std::sync::Arc<std::sync::Mutex<crate::stat
         click_at(1048, 1008);
         sleep(Duration::from_millis(500)).await;
         
-        // 5. Chat close button
+        // 5. Chat close button (back to friend list)
         click_at(40, 42);
         sleep(Duration::from_millis(500)).await;
         
-        // 6. Scroll to next chat
-        unsafe { SetCursorPos(200, 500); }
-        sleep(Duration::from_millis(100)).await;
-        
-        // WheelDown 7
-        unsafe {
-            for _ in 0..7 {
-                mouse_event(MOUSEEVENTF_WHEEL, 0, 0, -120, 0);
-                std::thread::sleep(Duration::from_millis(50));
+        // 6. Scroll down a full page (7 friends) ONLY after the 7th friend
+        if page_index == 6 && i != loop_count - 1 {
+            unsafe { SetCursorPos(200, 500); }
+            sleep(Duration::from_millis(100)).await;
+            
+            accumulated_scroll += exact_notches_per_page;
+            let notches_to_scroll = accumulated_scroll.round() as u32;
+            accumulated_scroll -= notches_to_scroll as f32;
+            
+            unsafe {
+                for _ in 0..notches_to_scroll {
+                    mouse_event(MOUSEEVENTF_WHEEL, 0, 0, -120, 0);
+                }
             }
+            sleep(Duration::from_millis(500)).await;
         }
-        sleep(Duration::from_millis(500)).await;
     }
     
     // Auto turn off when done
