@@ -67,3 +67,10 @@ pub async fn check_status(script_name: String, state: State<'_, AppState>) -> Re
 
     Ok(status)
 }
+
+#[tauri::command]
+pub async fn set_dialogue_speed(speed: u64, state: State<'_, AppState>) -> Result<(), String> {
+    let mut macro_state = state.0.lock().unwrap();
+    macro_state.auto_dialogue_speed = speed;
+    Ok(())
+}

@@ -35,6 +35,10 @@
             <h2>Auto Dialogue</h2>
             <p>Automatically skips long story dialogues</p>
             <p class="hotkey-hint"><strong>Hotkey:</strong> Press <kbd>F4</kbd> in-game to start/stop.</p>
+            <div class="speed-control" style="margin-top: 10px; display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 0.85em; opacity: 0.9;">Delay (ms):</span>
+              <input type="number" id="dialogue-speed" value="1000" min="50" step="50" style="width: 70px; padding: 4px; border-radius: 4px; border: 1px solid #444; background: #222; color: #fff;" />
+            </div>
           </div>
           <label class="switch">
             <input type="checkbox" id="toggle-dialogue" data-script="auto_dialogue.ahk">
