@@ -24,17 +24,17 @@ pub fn run() {
                 hook::init_hook(app_state, tokio_handle);
                 
                 loop {
-                    let active = {
+                    let (active, speed) = {
                         let state = handle.state::<AppState>();
                         let guard = state.0.lock().unwrap();
-                        guard.auto_dialogue_active
+                        (guard.auto_dialogue_active, guard.auto_dialogue_speed)
                     };
                     
                     if active {
                         macros::loot_loop_step().await;
                     }
                     
-                    sleep(Duration::from_millis(1000)).await;
+                    sleep(Duration::from_millis(speed)).await;
                 }
             });
 
@@ -44,6 +44,7 @@ pub fn run() {
             commands::start_script,
             commands::stop_script,
             commands::check_status,
+            commands::set_dialogue_speed,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

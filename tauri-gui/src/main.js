@@ -75,4 +75,19 @@ document.addEventListener('DOMContentLoaded', () => {
   setInterval(() => {
     checkboxes.forEach(updateToggleState);
   }, 2000);
+  
+  const speedInput = document.getElementById('dialogue-speed');
+  if (speedInput) {
+    speedInput.addEventListener('change', async (e) => {
+      const speed = parseInt(e.target.value, 10);
+      if (speed >= 50) {
+        try {
+          await invoke('set_dialogue_speed', { speed });
+          setStatus(`Speed set to ${speed}ms`);
+        } catch (error) {
+          setStatus(`Error: ${error}`);
+        }
+      }
+    });
+  }
 });
