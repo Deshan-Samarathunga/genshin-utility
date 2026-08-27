@@ -35,6 +35,10 @@
             <h2>Auto Dialogue</h2>
             <p>Automatically skips long story dialogues</p>
             <p class="hotkey-hint"><strong>Hotkey:</strong> Press <kbd>F4</kbd> in-game to start/stop.</p>
+            <div class="speed-control" style="margin-top: 10px; display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 0.85em; opacity: 0.9;">Delay (ms):</span>
+              <input type="number" id="dialogue-speed" value="1000" min="50" step="50" style="width: 70px; padding: 4px; border-radius: 4px; border: 1px solid #444; background: #222; color: #fff;" />
+            </div>
           </div>
           <label class="switch">
             <input type="checkbox" id="toggle-dialogue" data-script="auto_dialogue.ahk">
@@ -42,18 +46,7 @@
           </label>
         </div>
 
-        <!-- Script 3 -->
-        <div class="script-card">
-          <div class="script-info">
-            <h2>PS5 Voice Chat</h2>
-            <p>Speak to type in co-op chat using DualSense</p>
-            <p class="hotkey-hint"><strong>Hotkeys:</strong> <kbd>Touchpad</kbd> (Voice), <kbd>L3</kbd> (Space), <kbd>R3</kbd> (Backspace), <kbd>Options</kbd> (Send).</p>
-          </div>
-          <label class="switch">
-            <input type="checkbox" id="toggle-voice" data-script="ps5_voice_typing.ahk">
-            <span class="slider"></span>
-          </label>
-        </div>
+
         <!-- Script 4 -->
         <div class="script-card">
           <div class="script-info">
@@ -64,6 +57,7 @@
               <input type="text" id="auto-message-text" placeholder="Message text..." />
               <input type="number" id="auto-message-count" placeholder="Loops" min="1" value="1" />
             </div>
+            <p class="hotkey-hint" style="margin-top: 8px; font-size: 0.85em; opacity: 0.8;"><em>Tip: Enter a multiple of 7 (e.g. 7, 14, 21) to match full-page scrolling!</em></p>
           </div>
           <label class="switch">
             <input type="checkbox" id="toggle-message" data-script="auto_message.ahk">

@@ -1,65 +1,76 @@
-use std::os::windows::process::CommandExt;
-use std::process::Command;
-
-use crate::ahk;
-
-const DETACHED_PROCESS: u32 = 0x00000008;
-const CREATE_NO_WINDOW: u32 = 0x08000000;
+use tauri::State;
+use crate::state::AppState;
 
 #[tauri::command]
-pub async fn start_script(script_name: String, args: Option<Vec<String>>, app_handle: tauri::AppHandle) -> Result<String, String> {
-    let ahk_exe = ahk::resolve_ahk_exe().ok_or("AutoHotkey v2 not found. Please install it from autohotkey.com.")?;
-    
-    let script_path = ahk::get_ahk_dir(&app_handle).join(&script_name);
-    if !script_path.exists() {
-        return Err(format!("Script not found: {}", script_path.display()));
-    }
-    
-    // Kill any existing instances first to avoid AHK's "Could not close previous instance" prompt
-    let pids = ahk::pids_for_script(&script_name);
-    for pid in pids {
-        let _ = Command::new("taskkill")
-            .args(["/PID", &pid.to_string(), "/T", "/F"])
-            .creation_flags(CREATE_NO_WINDOW)
-            .spawn();
-    }
-    
-    let mut cmd = Command::new(ahk_exe);
-    cmd.arg(&script_path);
-    
-    if let Some(args_list) = args {
-        for arg in args_list {
-            cmd.arg(arg);
+pub async fn start_script(script_name: String, args: Option<Vec<String>>, state: State<'_, AppState>) -> Result<String, String> {
+    let mut macro_state = state.0.lock().unwrap();
+
+    match script_name.as_str() {
+        "auto_dialogue.ahk" => {
+            macro_state.auto_dialogue = true;
+            // auto_dialogue_active toggles via F4, but we can reset it to false
+            macro_state.auto_dialogue_active = false;
         }
+        "genshin_batch_artifact_remover.ahk" => {
+            macro_state.artifact_remover = true;
+        }
+        "auto_message.ahk" => {
+            macro_state.auto_message = true;
+            if let Some(args_list) = args {
+                if args_list.len() >= 1 {
+                    macro_state.auto_message_text = args_list[0].clone();
+                }
+                if args_list.len() >= 2 {
+                    if let Ok(count) = args_list[1].parse::<u32>() {
+                        macro_state.auto_message_count = count;
+                    }
+                }
+            }
+        }
+        _ => return Err(format!("Unknown script: {}", script_name)),
     }
-    
-    cmd.creation_flags(DETACHED_PROCESS | CREATE_NO_WINDOW)
-        .spawn()
-        .map_err(|e| format!("Failed to start script: {}", e))?;
-        
-    ahk::invalidate_cache();
-    Ok(format!("Started {}", script_name))
+
+    Ok(format!("Enabled {}", script_name))
 }
 
 #[tauri::command]
-pub async fn stop_script(script_name: String) -> Result<String, String> {
-    let pids = ahk::pids_for_script(&script_name);
-    if pids.is_empty() {
-        return Ok(format!("Stopped {} (was not running)", script_name));
+pub async fn stop_script(script_name: String, state: State<'_, AppState>) -> Result<String, String> {
+    let mut macro_state = state.0.lock().unwrap();
+
+    match script_name.as_str() {
+        "auto_dialogue.ahk" => {
+            macro_state.auto_dialogue = false;
+            macro_state.auto_dialogue_active = false;
+        }
+        "genshin_batch_artifact_remover.ahk" => {
+            macro_state.artifact_remover = false;
+        }
+        "auto_message.ahk" => {
+            macro_state.auto_message = false;
+        }
+        _ => return Err(format!("Unknown script: {}", script_name)),
     }
-    
-    for pid in pids {
-        let _ = Command::new("taskkill")
-            .args(["/PID", &pid.to_string(), "/T", "/F"])
-            .creation_flags(CREATE_NO_WINDOW)
-            .spawn();
-    }
-    
-    ahk::invalidate_cache();
-    Ok(format!("Stopped {}", script_name))
+
+    Ok(format!("Disabled {}", script_name))
 }
 
 #[tauri::command]
-pub async fn check_status(script_name: String) -> Result<bool, String> {
-    Ok(!ahk::pids_for_script(&script_name).is_empty())
+pub async fn check_status(script_name: String, state: State<'_, AppState>) -> Result<bool, String> {
+    let macro_state = state.0.lock().unwrap();
+
+    let status = match script_name.as_str() {
+        "auto_dialogue.ahk" => macro_state.auto_dialogue,
+        "genshin_batch_artifact_remover.ahk" => macro_state.artifact_remover,
+        "auto_message.ahk" => macro_state.auto_message,
+        _ => false,
+    };
+
+    Ok(status)
+}
+
+#[tauri::command]
+pub async fn set_dialogue_speed(speed: u64, state: State<'_, AppState>) -> Result<(), String> {
+    let mut macro_state = state.0.lock().unwrap();
+    macro_state.auto_dialogue_speed = speed;
+    Ok(())
 }
