@@ -40,7 +40,7 @@ async function handleToggle(event) {
   if (checkbox.checked) {
     try {
       let args = null;
-      if (scriptName === 'auto_message.ahk') {
+      if (scriptName === 'auto_message') {
         const text = document.getElementById('auto-message-text').value;
         const count = document.getElementById('auto-message-count').value;
         args = [text, count];

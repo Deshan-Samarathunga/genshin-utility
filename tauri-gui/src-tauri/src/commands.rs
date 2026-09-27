@@ -6,15 +6,15 @@ pub async fn start_script(script_name: String, args: Option<Vec<String>>, state:
     let mut macro_state = state.0.lock().unwrap();
 
     match script_name.as_str() {
-        "auto_dialogue.ahk" => {
+        "auto_dialogue" => {
             macro_state.auto_dialogue = true;
             // auto_dialogue_active toggles via F4, but we can reset it to false
             macro_state.auto_dialogue_active = false;
         }
-        "genshin_batch_artifact_remover.ahk" => {
+        "artifact_remover" => {
             macro_state.artifact_remover = true;
         }
-        "auto_message.ahk" => {
+        "auto_message" => {
             macro_state.auto_message = true;
             if let Some(args_list) = args {
                 if args_list.len() >= 1 {
@@ -38,14 +38,14 @@ pub async fn stop_script(script_name: String, state: State<'_, AppState>) -> Res
     let mut macro_state = state.0.lock().unwrap();
 
     match script_name.as_str() {
-        "auto_dialogue.ahk" => {
+        "auto_dialogue" => {
             macro_state.auto_dialogue = false;
             macro_state.auto_dialogue_active = false;
         }
-        "genshin_batch_artifact_remover.ahk" => {
+        "artifact_remover" => {
             macro_state.artifact_remover = false;
         }
-        "auto_message.ahk" => {
+        "auto_message" => {
             macro_state.auto_message = false;
         }
         _ => return Err(format!("Unknown script: {}", script_name)),
@@ -59,9 +59,9 @@ pub async fn check_status(script_name: String, state: State<'_, AppState>) -> Re
     let macro_state = state.0.lock().unwrap();
 
     let status = match script_name.as_str() {
-        "auto_dialogue.ahk" => macro_state.auto_dialogue,
-        "genshin_batch_artifact_remover.ahk" => macro_state.artifact_remover,
-        "auto_message.ahk" => macro_state.auto_message,
+        "auto_dialogue" => macro_state.auto_dialogue,
+        "artifact_remover" => macro_state.artifact_remover,
+        "auto_message" => macro_state.auto_message,
         _ => false,
     };
 
