@@ -17,6 +17,7 @@
         "assets": [
           "CHANGELOG.md",
           "tauri-gui/package.json",
+          "tauri-gui/package-lock.json",
           "tauri-gui/src-tauri/tauri.conf.json",
           "tauri-gui/src-tauri/Cargo.toml",
           "tauri-gui/src-tauri/Cargo.lock"

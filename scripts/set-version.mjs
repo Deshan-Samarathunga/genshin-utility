@@ -16,6 +16,14 @@ const updateJson = (path) => {
 updateJson('tauri-gui/package.json');
 updateJson('tauri-gui/src-tauri/tauri.conf.json');
 
+// The lockfile repeats the package version at the top and under packages[""].
+const lockPath = 'tauri-gui/package-lock.json';
+const lock = JSON.parse(readFileSync(lockPath, 'utf8'));
+lock.version = version;
+if (lock.packages?.['']) lock.packages[''].version = version;
+writeFileSync(lockPath, `${JSON.stringify(lock, null, 2)}
+`);
+
 // Only the [package] version, not dependency versions.
 const cargoPath = 'tauri-gui/src-tauri/Cargo.toml';
 const cargo = readFileSync(cargoPath, 'utf8');
