@@ -1,0 +1,91 @@
+@font-face {
+  font-family: 'Orbitron';
+  src: url('assets/fonts/Orbitron-VariableFont_wght.ttf') format('truetype');
+  font-weight: 400 900;
+}
+
+html,
+body {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+  user-select: none;
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  height: 100vh;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.bubble {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: 680px;
+  margin-top: 6px;
+  padding: 12px 20px;
+  background: rgba(24, 24, 24, 0.88);
+  border: 1px solid #303030;
+  border-left: 3px solid #10b981;
+  color: #ffffff;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.bubble.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  background: #10b981;
+}
+
+.bubble[data-state="listening"] .dot {
+  background: #ef4444;
+  animation: pulse 0.9s ease-in-out infinite;
+}
+
+.bubble[data-state="transcribing"] .dot,
+.bubble[data-state="loading"] .dot {
+  background: #f59e0b;
+  animation: pulse 0.6s ease-in-out infinite;
+}
+
+.bubble[data-state="error"] {
+  border-left-color: #ef4444;
+}
+
+.bubble[data-state="error"] .dot {
+  background: #ef4444;
+}
+
+.text {
+  font-size: 18px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.text:empty {
+  display: none;
+}
+
+.message {
+  font-family: 'Orbitron', 'Inter', sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.6px;
+  color: #c8c8c8;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.35;
+  }
+}

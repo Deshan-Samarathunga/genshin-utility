@@ -232,15 +232,6 @@ input:active + .slider {
   background-color: var(--primary-active);
 }
 
-.status-bar {
-  padding: var(--spacing-sm);
-  text-align: center;
-  font-size: 13px; /* body-sm */
-  color: var(--body);
-  border-top: 1px solid var(--hairline);
-  background-color: var(--canvas-elevated);
-}
-
 .credit {
   text-align: center;
   font-size: 11px;
@@ -249,4 +240,620 @@ input:active + .slider {
   opacity: 0.7;
   padding: var(--spacing-xxs) 0 var(--spacing-xs);
   background-color: var(--canvas);
+}
+
+/* Voice Chat card: the switch sits in the corner so settings get the full card width */
+.script-card.voice-card {
+  position: relative;
+}
+
+.script-card.voice-card .script-info {
+  padding-right: 0;
+}
+
+.script-card.voice-card .script-info h2,
+.script-card.voice-card .script-info > p:first-of-type {
+  padding-right: 72px;
+}
+
+.script-card.voice-card > .switch {
+  position: absolute;
+  top: var(--spacing-sm);
+  right: var(--spacing-sm);
+}
+
+.voice-grid [hidden] {
+  display: none !important;
+}
+
+.script-card.voice-card {
+  align-items: flex-start;
+}
+
+.voice-last {
+  margin-top: var(--spacing-xxs) !important;
+  font-size: 13px !important;
+  color: var(--ink) !important;
+  overflow-wrap: anywhere;
+}
+
+.voice-last[data-state="error"] {
+  color: #f87171 !important;
+}
+
+.voice-settings {
+  margin-top: var(--spacing-xs);
+  font-size: 13px;
+  color: var(--body);
+}
+
+.voice-settings summary {
+  cursor: pointer;
+  color: var(--ink);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-size: 11px;
+}
+
+.voice-grid,
+.voice-local,
+.voice-cloud {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xxs);
+}
+
+.voice-grid {
+  margin-top: var(--spacing-xs);
+}
+
+.voice-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.voice-grid label.voice-check {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--spacing-xxs);
+}
+
+.voice-grid select,
+.voice-grid input[type="text"],
+.voice-grid input[type="password"],
+.voice-grid textarea,
+.voice-actions button {
+  background-color: var(--canvas);
+  border: 1px solid var(--hairline);
+  color: var(--ink);
+  padding: 6px var(--spacing-xxs);
+  border-radius: 0px; /* SHARP */
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 13px;
+}
+
+.voice-grid textarea {
+  resize: vertical;
+}
+
+.voice-grid select:focus,
+.voice-grid input:focus,
+.voice-grid textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.voice-actions {
+  display: flex;
+  gap: var(--spacing-xxs);
+}
+
+.voice-actions button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.voice-actions button:hover:not(:disabled) {
+  border-color: var(--primary);
+}
+
+.voice-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.voice-note {
+  font-size: 12px !important;
+  opacity: 0.85;
+}
+
+.voice-note a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.voice-note a:hover {
+  text-decoration: underline;
+}
+
+/* Sidebar + tabs */
+.app-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.sidebar {
+  width: 224px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--spacing-xs) var(--spacing-xxs);
+  border-right: 1px solid var(--hairline);
+  background-color: var(--canvas);
+}
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-left: 3px solid transparent;
+  border-radius: 0px; /* SHARP */
+  color: var(--body);
+  font-family: inherit;
+  font-size: 12px;
+  letter-spacing: 0;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color .15s, color .15s;
+}
+
+.tab-btn span {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tab-btn svg {
+  flex-shrink: 0;
+}
+
+.tab-btn:hover {
+  color: var(--ink);
+  background-color: var(--canvas-elevated);
+}
+
+.tab-btn.active {
+  color: var(--ink);
+  background-color: var(--canvas-elevated);
+  border-color: var(--hairline);
+  border-left-color: var(--primary);
+}
+
+.tab-btn:focus-visible {
+  outline: 1px solid var(--primary);
+  outline-offset: -1px;
+}
+
+.tab-dot {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  background-color: var(--hairline);
+}
+
+.tab-dot.on {
+  background-color: var(--primary);
+  box-shadow: 0 0 6px var(--primary);
+}
+
+.tab-panel[hidden] {
+  display: none !important;
+}
+
+/* API keys table */
+.voice-keys {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xxs);
+  margin-top: var(--spacing-xxs);
+}
+
+.voice-subhead {
+  color: var(--ink);
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.voice-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--hairline);
+}
+
+.voice-table {
+  width: 100%;
+  min-width: 480px;
+  border-collapse: collapse;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 12px;
+}
+
+.voice-table th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--body);
+  padding: 6px 8px;
+  background-color: var(--canvas);
+  border-bottom: 1px solid var(--hairline);
+  white-space: nowrap;
+}
+
+.voice-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--hairline);
+  vertical-align: middle;
+}
+
+.voice-table tr:last-child td {
+  border-bottom: none;
+}
+
+.voice-table tr.active td {
+  background-color: rgba(16, 185, 129, 0.08);
+}
+
+.voice-table tr.active td:first-child {
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+
+.voice-table input {
+  width: 100%;
+  min-width: 90px;
+  background-color: var(--canvas);
+  border: 1px solid var(--hairline);
+  color: var(--ink);
+  padding: 5px 6px;
+  border-radius: 0px; /* SHARP */
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.voice-table input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.voice-provider-name {
+  white-space: nowrap;
+}
+
+.voice-provider-name strong {
+  display: block;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.voice-provider-name a {
+  color: var(--primary);
+  text-decoration: none;
+  font-size: 11px;
+  margin-left: 6px;
+}
+
+.voice-key-status {
+  font-size: 11px;
+  color: var(--body);
+}
+
+.voice-key-status.saved {
+  color: var(--primary);
+}
+
+.voice-key-cell {
+  white-space: nowrap;
+}
+
+.voice-key-cell input {
+  width: calc(100% - 52px);
+  vertical-align: middle;
+}
+
+.voice-key-cell .voice-reveal {
+  width: 48px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.voice-endpoint-cell input {
+  display: block;
+}
+
+.voice-endpoint-cell input + input {
+  margin-top: 4px;
+}
+
+.voice-endpoint-cell input:last-child {
+  color: var(--body);
+}
+
+.voice-reveal,
+.voice-use {
+  background-color: var(--canvas);
+  border: 1px solid var(--hairline);
+  color: var(--ink);
+  padding: 4px 8px;
+  border-radius: 0px; /* SHARP */
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.voice-reveal:hover,
+.voice-use:hover:not(:disabled) {
+  border-color: var(--primary);
+}
+
+.voice-use:disabled {
+  color: var(--primary);
+  border-color: transparent;
+  background: transparent;
+  cursor: default;
+}
+
+/* Header line-art gears (Meropide machinery) */
+.hero-band-cinema {
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-band-cinema .brand {
+  position: relative;
+  z-index: 1;
+}
+
+/* Fixed-size gear train pinned to the left edge: it keeps its size when the window resizes. */
+.hero-mech {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: auto;
+  aspect-ratio: 2 / 1;
+  pointer-events: none;
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1;
+  stroke-linejoin: round;
+  opacity: 0.16;
+}
+
+.hero-mech-left {
+  left: 0;
+  -webkit-mask-image: linear-gradient(to right, #000 55%, transparent);
+  mask-image: linear-gradient(to right, #000 55%, transparent);
+}
+
+
+.hero-mech .mech-spin {
+  /* Each gear is drawn around (0,0) inside a translated group, so spin about that point. */
+  transform-box: view-box;
+  transform-origin: 0 0;
+  animation: mech-rotate linear infinite;
+}
+
+@keyframes mech-rotate {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-mech * {
+    animation: none !important;
+  }
+}
+
+/* Status message, top-right of the header */
+.status-pill {
+  position: absolute;
+  top: 50%;
+  right: var(--spacing-sm);
+  transform: translateY(-50%);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* Stay within the space right of the centred title (about 250px from centre). */
+  max-width: calc(50% - 250px);
+  padding: 6px 12px;
+  border: 1px solid var(--hairline);
+  background-color: var(--canvas-elevated);
+  color: var(--body);
+  font-size: 12px;
+  letter-spacing: 0.4px;
+}
+
+.status-pill span {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-pill::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  background-color: var(--primary);
+}
+
+.status-pill.error::before {
+  background-color: #ef4444;
+}
+
+/* Scrollbars: thin, sharp, emerald on hover. (Only the ::-webkit-scrollbar rules: setting the standard
+   scrollbar-color/scrollbar-width properties would make WebView2 ignore these.) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #3a3a3a;
+  border: 2px solid var(--canvas);
+  border-radius: 0px; /* SHARP */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--primary);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background-color: var(--primary-active);
+}
+
+::-webkit-scrollbar-corner,
+::-webkit-scrollbar-button {
+  display: none;
+  background: transparent;
+}
+
+/* "Open with Genshin" toggle pinned to the bottom of the sidebar */
+.sidebar-option {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px;
+  border-top: 1px solid var(--hairline);
+  color: var(--body);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.switch.switch-sm {
+  width: 40px;
+  height: 20px;
+}
+
+.switch.switch-sm .slider:before {
+  height: 14px;
+  width: 14px;
+  left: 2px;
+  bottom: 2px;
+}
+
+.switch.switch-sm input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+/* Sidebar icon hover animations */
+.tab-icon {
+  overflow: visible;
+}
+
+.tab-icon g,
+.tab-icon path {
+  transform-box: fill-box;
+}
+
+/* Bin: the lid flips open from its left hinge, then settles. */
+.ico-lid {
+  transform-origin: left bottom;
+}
+
+.tab-btn:hover .ico-lid {
+  animation: ico-lid 0.7s ease-in-out;
+}
+
+@keyframes ico-lid {
+  0%, 100% { transform: rotate(0) translateY(0); }
+  35% { transform: rotate(-24deg) translateY(-1.5px); }
+  60% { transform: rotate(-16deg) translateY(-1px); }
+}
+
+/* Speech bubble: a small bounce while the play arrow nudges forward. */
+.ico-bubble {
+  transform-origin: center bottom;
+}
+
+.tab-btn:hover .ico-bubble {
+  animation: ico-bounce 0.6s ease-out;
+}
+
+.tab-btn:hover .ico-play {
+  animation: ico-nudge 0.6s ease-in-out 0.1s;
+}
+
+@keyframes ico-bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  30% { transform: translateY(-2.5px) scale(1.04, 0.96); }
+  55% { transform: translateY(0) scale(0.98, 1.02); }
+}
+
+@keyframes ico-nudge {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(2px); }
+}
+
+/* Paper plane: flies out to the top-right and swoops back in from the bottom-left. */
+.tab-btn:hover .ico-plane {
+  animation: ico-fly 0.9s ease-in-out;
+}
+
+@keyframes ico-fly {
+  0% { transform: translate(0, 0); opacity: 1; }
+  40% { transform: translate(12px, -12px) scale(0.7); opacity: 0; }
+  41% { transform: translate(-12px, 12px) scale(0.7); opacity: 0; }
+  100% { transform: translate(0, 0) scale(1); opacity: 1; }
+}
+
+/* Mic: sound waves pulse out on both sides while hovered. */
+.ico-wave {
+  opacity: 0;
+}
+
+.ico-wave-l {
+  transform-origin: right center;
+}
+
+.ico-wave-r {
+  transform-origin: left center;
+}
+
+.tab-btn:hover .ico-wave {
+  animation: ico-wave 1.1s ease-out infinite;
+}
+
+.tab-btn:hover .ico-wave-r {
+  animation-delay: 0.15s;
+}
+
+@keyframes ico-wave {
+  0% { opacity: 0; transform: scale(0.6); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.25); }
+}
+
+/* The active tab's icon picks up the accent colour. */
+.tab-btn.active .tab-icon {
+  color: var(--primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab-icon * {
+    animation: none !important;
+  }
 }

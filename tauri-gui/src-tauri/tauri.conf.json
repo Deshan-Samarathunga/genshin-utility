@@ -12,8 +12,11 @@
     "windows": [
       {
         "title": "Genshin Impact Utility",
-        "width": 600,
-        "height": 600,
+        "width": 900,
+        "height": 680,
+        "minWidth": 720,
+        "minHeight": 520,
+        "visible": false,
         "resizable": true
       }
     ],

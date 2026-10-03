@@ -1,5 +1,8 @@
-use tauri::State;
+use std::sync::atomic::Ordering;
+use tauri::{AppHandle, Emitter, State};
 use crate::state::AppState;
+use crate::voice::settings::VoiceSettings;
+use crate::voice::{setup, VoiceHandle};
 
 #[tauri::command]
 pub async fn start_script(script_name: String, args: Option<Vec<String>>, state: State<'_, AppState>) -> Result<String, String> {
@@ -27,6 +30,9 @@ pub async fn start_script(script_name: String, args: Option<Vec<String>>, state:
                 }
             }
         }
+        "voice_chat" => {
+            macro_state.voice_chat = true;
+        }
         _ => return Err(format!("Unknown script: {}", script_name)),
     }
 
@@ -48,6 +54,9 @@ pub async fn stop_script(script_name: String, state: State<'_, AppState>) -> Res
         "auto_message" => {
             macro_state.auto_message = false;
         }
+        "voice_chat" => {
+            macro_state.voice_chat = false;
+        }
         _ => return Err(format!("Unknown script: {}", script_name)),
     }
 
@@ -62,6 +71,7 @@ pub async fn check_status(script_name: String, state: State<'_, AppState>) -> Re
         "auto_dialogue" => macro_state.auto_dialogue,
         "artifact_remover" => macro_state.artifact_remover,
         "auto_message" => macro_state.auto_message,
+        "voice_chat" => macro_state.voice_chat,
         _ => false,
     };
 
@@ -73,4 +83,82 @@ pub async fn set_dialogue_speed(speed: u64, state: State<'_, AppState>) -> Resul
     let mut macro_state = state.0.lock().unwrap();
     macro_state.auto_dialogue_speed = speed;
     Ok(())
+}
+
+/// Whether "Open with Genshin" is on (reads Task Scheduler).
+#[tauri::command]
+pub fn get_auto_open() -> bool {
+    crate::autostart::refresh()
+}
+
+#[tauri::command]
+pub fn set_auto_open(enabled: bool) -> Result<bool, String> {
+    crate::autostart::set_enabled(enabled)
+}
+
+#[tauri::command]
+pub fn get_voice_settings(voice: State<'_, VoiceHandle>) -> VoiceSettings {
+    voice.settings()
+}
+
+#[tauri::command]
+pub fn save_voice_settings(settings: VoiceSettings, voice: State<'_, VoiceHandle>) -> Result<(), String> {
+    voice.save_settings(settings)
+}
+
+#[tauri::command]
+pub fn list_input_devices() -> Vec<String> {
+    crate::voice::audio::input_device_names()
+}
+
+#[derive(serde::Serialize)]
+pub struct VoiceEngineStatus {
+    engine_cpu: bool,
+    engine_gpu: bool,
+    downloaded_models: Vec<String>,
+    models: Vec<String>,
+}
+
+#[tauri::command]
+pub fn voice_engine_status(voice: State<'_, VoiceHandle>) -> VoiceEngineStatus {
+    let root = &voice.data_root;
+    let models_dir = setup::models_dir(root);
+    VoiceEngineStatus {
+        engine_cpu: setup::find_server_exe(&setup::engine_dir(root, false)).is_some(),
+        engine_gpu: setup::find_server_exe(&setup::engine_dir(root, true)).is_some(),
+        downloaded_models: setup::MODELS
+            .iter()
+            .filter(|m| crate::voice::stt::model_path(&models_dir, m).exists())
+            .map(|m| m.to_string())
+            .collect(),
+        models: setup::MODELS.iter().map(|m| m.to_string()).collect(),
+    }
+}
+
+/// Downloads the local engine ("engine") or the selected model ("model"), emitting `voice-download` progress.
+#[tauri::command]
+pub async fn voice_download(what: String, app: AppHandle, voice: State<'_, VoiceHandle>) -> Result<String, String> {
+    let voice = voice.inner().clone();
+    if voice.downloading.swap(true, Ordering::SeqCst) {
+        return Err("A download is already running".into());
+    }
+    let settings = voice.settings();
+    let mut last_emit = 0u64;
+    let progress = |done: u64, total: Option<u64>| {
+        if done - last_emit >= 512 * 1024 || Some(done) == total {
+            last_emit = done;
+            let _ = app.emit("voice-download", serde_json::json!({ "what": what, "done": done, "total": total }));
+        }
+    };
+    let result = match what.as_str() {
+        "engine" => setup::download_engine(&voice.client, &voice.data_root, settings.local_gpu, progress)
+            .await
+            .map(|_| format!("Engine ({}) ready", if settings.local_gpu { "GPU" } else { "CPU" })),
+        "model" => setup::download_model(&voice.client, &voice.data_root, &settings.local_model, progress)
+            .await
+            .map(|_| format!("Model {} ready", settings.local_model)),
+        other => Err(format!("Unknown download: {other}")),
+    };
+    voice.downloading.store(false, Ordering::SeqCst);
+    result
 }

@@ -7,7 +7,7 @@ use windows::Win32::UI::WindowsAndMessaging::{SetCursorPos, GetCursorPos};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     mouse_event, keybd_event, 
     MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP, MOUSEEVENTF_WHEEL,
-    KEYEVENTF_KEYUP, VK_CONTROL, VK_V, KEYBD_EVENT_FLAGS
+    KEYEVENTF_KEYUP, VK_BACK, VK_CONTROL, VK_V, KEYBD_EVENT_FLAGS, VIRTUAL_KEY
 };
 use windows::Win32::Foundation::POINT;
 
@@ -32,6 +32,42 @@ pub fn click_sequence(points: &[(i32, i32)], delay_ms: u64) {
         }
         
         SetCursorPos(ox, oy);
+    }
+}
+
+/// Pastes `text` into the focused input via the clipboard (Ctrl+V), restoring the previous clipboard text.
+pub fn paste_text(text: &str) {
+    if let Ok(mut clipboard) = Clipboard::new() {
+        let saved_clip = clipboard.get_text().unwrap_or_default();
+        if clipboard.set_text(text.to_string()).is_err() {
+            return;
+        }
+
+        unsafe {
+            keybd_event(VK_CONTROL.0 as u8, 0, KEYBD_EVENT_FLAGS(0), 0);
+            keybd_event(VK_V.0 as u8, 0, KEYBD_EVENT_FLAGS(0), 0); // V
+            std::thread::sleep(Duration::from_millis(50));
+            keybd_event(VK_V.0 as u8, 0, KEYEVENTF_KEYUP, 0);
+            keybd_event(VK_CONTROL.0 as u8, 0, KEYEVENTF_KEYUP, 0);
+        }
+        std::thread::sleep(Duration::from_millis(500));
+
+        let _ = clipboard.set_text(saved_clip);
+    }
+}
+
+pub fn press_key(vk: VIRTUAL_KEY) {
+    unsafe {
+        keybd_event(vk.0 as u8, 0, KEYBD_EVENT_FLAGS(0), 0);
+        std::thread::sleep(Duration::from_millis(25));
+        keybd_event(vk.0 as u8, 0, KEYEVENTF_KEYUP, 0);
+    }
+}
+
+pub fn backspace(count: usize) {
+    for _ in 0..count {
+        press_key(VK_BACK);
+        std::thread::sleep(Duration::from_millis(25));
     }
 }
 
@@ -120,21 +156,7 @@ pub async fn auto_message_run(state: std::sync::Arc<std::sync::Mutex<crate::stat
         sleep(Duration::from_millis(500)).await;
         
         // 3. Paste the text
-        if let Ok(mut clipboard) = Clipboard::new() {
-            let saved_clip = clipboard.get_text().unwrap_or_default();
-            clipboard.set_text(text.clone()).unwrap();
-            
-            unsafe {
-                keybd_event(VK_CONTROL.0 as u8, 0, KEYBD_EVENT_FLAGS(0), 0);
-                keybd_event(VK_V.0 as u8, 0, KEYBD_EVENT_FLAGS(0), 0); // V
-                sleep(Duration::from_millis(50)).await;
-                keybd_event(VK_V.0 as u8, 0, KEYEVENTF_KEYUP, 0);
-                keybd_event(VK_CONTROL.0 as u8, 0, KEYEVENTF_KEYUP, 0);
-            }
-            sleep(Duration::from_millis(500)).await;
-            
-            let _ = clipboard.set_text(saved_clip);
-        }
+        paste_text(&text);
         
         // 4. Send button
         click_at(1048, 1008);

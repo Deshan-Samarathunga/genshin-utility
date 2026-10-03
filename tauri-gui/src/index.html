@@ -8,23 +8,54 @@
     <!-- Google Fonts for modern typography -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="./main.js" defer></script>
+    <script src="./hero.js" defer></script>
   </head>
   <body>
     <div class="app-container">
       <header class="hero-band-cinema">
+        <svg class="hero-mech hero-mech-left" id="hero-mech-left" viewBox="0 0 240 120" preserveAspectRatio="xMinYMid meet" aria-hidden="true"></svg>
+        <div class="status-pill" id="status-pill" role="status" aria-live="polite"><span id="status-bar">Ready</span></div>
         <div class="brand">
           <img class="brand-logo" src="assets/logo.png" alt="Genshin Utility logo" />
           <h1>GENSHIN UTILITY</h1>
         </div>
       </header>
 
+      <div class="app-body">
+        <nav class="sidebar" role="tablist" aria-label="Features">
+          <button type="button" class="tab-btn" role="tab" data-tab="remover">
+            <svg class="tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g class="ico-lid"><path d="M4 7h16M9 7V4h6v3"/></g><path d="M6 7l1 13h10l1-13M10 11v5M14 11v5"/></svg>
+            <span>Artifact Remover</span><i class="tab-dot" data-for="artifact_remover"></i>
+          </button>
+          <button type="button" class="tab-btn" role="tab" data-tab="dialogue">
+            <svg class="tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g class="ico-bubble"><path d="M4 5h16v11H9l-5 4z"/><path class="ico-play" d="M10 9l3 2-3 2z"/></g></svg>
+            <span>Auto Dialogue</span><i class="tab-dot" data-for="auto_dialogue"></i>
+          </button>
+          <button type="button" class="tab-btn" role="tab" data-tab="message">
+            <svg class="tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g class="ico-plane"><path d="M21 3L10 14M21 3l-7 18-4-7-7-4z"/></g></svg>
+            <span>Auto Message</span><i class="tab-dot" data-for="auto_message"></i>
+          </button>
+          <button type="button" class="tab-btn" role="tab" data-tab="voice">
+            <svg class="tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/><path class="ico-wave ico-wave-l" d="M3 6.5a5 5 0 0 0 0 5"/><path class="ico-wave ico-wave-r" d="M21 6.5a5 5 0 0 1 0 5"/></svg>
+            <span>Voice Chat</span><i class="tab-dot" data-for="voice_chat"></i>
+          </button>
+
+          <label class="sidebar-option" title="Starts hidden when you sign in to Windows and opens when Genshin starts. Closing the window then hides it to the tray.">
+            <span>Open with Genshin</span>
+            <span class="switch switch-sm">
+              <input type="checkbox" id="toggle-auto-open">
+              <span class="slider"></span>
+            </span>
+          </label>
+        </nav>
+
       <main class="scripts-list">
         <!-- Script 1 -->
-        <div class="script-card">
+        <div data-tab="remover" role="tabpanel" class="script-card tab-panel">
           <div class="script-info">
             <h2>Batch Artifact Remover</h2>
-            <p>Automatically clears trash artifacts</p>
-            <p class="hotkey-hint"><strong>Hotkeys:</strong> Press <kbd>F7</kbd> to clear artifacts, <kbd>Left</kbd> / <kbd>Right</kbd> to change characters.</p>
+            <p>Unequips all 5 artifacts from the current character in one press</p>
+            <p class="hotkey-hint"><strong>Hotkeys:</strong> Press <kbd>F7</kbd> to unequip artifacts, <kbd>Left</kbd> / <kbd>Right</kbd> to change characters.</p>
           </div>
           <label class="switch">
             <input type="checkbox" id="toggle-remover" data-script="artifact_remover">
@@ -33,7 +64,7 @@
         </div>
 
         <!-- Script 2 -->
-        <div class="script-card">
+        <div data-tab="dialogue" role="tabpanel" class="script-card tab-panel">
           <div class="script-info">
             <h2>Auto Dialogue</h2>
             <p>Automatically skips long story dialogues</p>
@@ -51,7 +82,7 @@
 
 
         <!-- Script 4 -->
-        <div class="script-card">
+        <div data-tab="message" role="tabpanel" class="script-card tab-panel">
           <div class="script-info">
             <h2>Auto Message</h2>
             <p>Send a message to multiple friends automatically</p>
@@ -67,9 +98,91 @@
             <span class="slider"></span>
           </label>
         </div>
-      </main>
+        <!-- Script 5 -->
+        <div data-tab="voice" role="tabpanel" class="script-card tab-panel voice-card">
+          <div class="script-info">
+            <h2>Voice Chat (PS5)</h2>
+            <p>Talk into the DualSense mic and it types into the open chat box</p>
+            <p class="hotkey-hint"><strong>Controller:</strong> Hold <kbd>Mic</kbd> to speak · tap to send · double-tap to discard · hold again to redo.</p>
+            <p class="voice-last" id="voice-last">Open a friend's chat in-game, then hold the mic button.</p>
 
-      <footer class="status-bar" id="status-bar">Ready</footer>
+            <details class="voice-settings">
+              <summary>Settings</summary>
+              <div class="voice-grid">
+                <label>Engine
+                  <select id="voice-engine">
+                    <optgroup label="Offline">
+                      <option value="local">Local Whisper (on this PC)</option>
+                    </optgroup>
+                    <optgroup label="Cloud (free)">
+                      <option value="groq">Groq Whisper — free tier</option>
+                      <option value="gemini">Google Gemini — free tier</option>
+                      <option value="deepgram">Deepgram Nova-3 — $200 free credit</option>
+                      <option value="elevenlabs">ElevenLabs Scribe — free monthly credits</option>
+                      <option value="mistral">Mistral Voxtral — free Experiment plan</option>
+                    </optgroup>
+                    <optgroup label="Cloud (paid)">
+                      <option value="openai">OpenAI</option>
+                      <option value="custom">Custom (OpenAI-compatible)</option>
+                    </optgroup>
+                  </select>
+                </label>
+                <label>Microphone
+                  <select id="voice-mic"></select>
+                </label>
+                <label>Language
+                  <select id="voice-language">
+                    <option value="en">English</option>
+                    <option value="auto">Auto-detect</option>
+                  </select>
+                </label>
+
+                <div class="voice-local">
+                  <label>Model
+                    <select id="voice-model"></select>
+                  </label>
+                  <label class="voice-check"><input type="checkbox" id="voice-gpu" /> Use NVIDIA GPU (CUDA)</label>
+                  <div class="voice-actions">
+                    <button type="button" id="voice-dl-engine">Download engine</button>
+                    <button type="button" id="voice-dl-model">Download model</button>
+                  </div>
+                  <p class="voice-note" id="voice-engine-status"></p>
+                </div>
+
+                <div class="voice-cloud">
+                  <p class="voice-note" id="voice-provider-hint"></p>
+                </div>
+
+                <div class="voice-keys">
+                  <span class="voice-subhead">API keys &amp; endpoints</span>
+                  <div class="voice-table-wrap">
+                    <table class="voice-table">
+                      <thead>
+                        <tr><th>Provider</th><th>API key</th><th>Model / Base URL</th><th></th></tr>
+                      </thead>
+                      <tbody id="voice-provider-rows"></tbody>
+                    </table>
+                  </div>
+                  <p class="voice-note">The highlighted row is the engine in use. Keys are stored on this PC only (voice.json in the app config folder).</p>
+                </div>
+
+                <label>Names &amp; words to spell correctly
+                  <textarea id="voice-vocabulary" rows="3" placeholder="Wriothesley, Chasca, duqs, Kazuto..."></textarea>
+                </label>
+                <label>Auto-corrections (one per line: <code>heard =&gt; wanted</code>)
+                  <textarea id="voice-replacements" rows="2" placeholder="riot fishy => Wriothesley"></textarea>
+                </label>
+              </div>
+            </details>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="toggle-voice" data-script="voice_chat">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </main>
+      </div>
+
       <div class="credit">by frost_bane</div>
     </div>
   </body>

@@ -5,6 +5,7 @@ pub struct MacroState {
     pub auto_dialogue: bool,
     pub artifact_remover: bool,
     pub auto_message: bool,
+    pub voice_chat: bool,
     pub auto_message_text: String,
     pub auto_message_count: u32,
     
@@ -21,6 +22,7 @@ impl MacroState {
             auto_dialogue: false,
             artifact_remover: false,
             auto_message: false,
+            voice_chat: false,
             auto_message_text: String::new(),
             auto_message_count: 0,
             auto_dialogue_active: false,

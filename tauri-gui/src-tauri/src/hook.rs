@@ -43,7 +43,7 @@ pub fn init_hook(state: AppState, handle: tokio::runtime::Handle) {
     });
 }
 
-fn is_genshin_active() -> bool {
+pub(crate) fn is_genshin_active() -> bool {
     unsafe {
         let hwnd = GetForegroundWindow();
         if hwnd.0 == std::ptr::null_mut() {

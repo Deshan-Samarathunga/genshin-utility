@@ -43,3 +43,23 @@ npm run tauri build
 ```
 
 The compiled installer will be located in `src-tauri/target/release/bundle/`.
+
+## Voice Chat (PS5)
+
+Type to friends in Genshin's chat from the couch using the DualSense's built-in microphone.
+
+1. Connect the DualSense **by USB** (Windows only exposes the controller mic over USB) and use Genshin's native controller support (not Steam Input / DS4Windows).
+2. In the **Voice Chat (PS5)** card, open *Settings* and pick an engine:
+   - **Local Whisper (offline):** click *Download engine* (whisper.cpp `whisper-server`, CPU or CUDA build) and *Download model*. `small.en q5` is a good CPU default; with *Use NVIDIA GPU* on, `large-v3-turbo q5` is the most accurate.
+   - **Cloud Whisper:** any OpenAI-compatible endpoint, e.g. Groq (`https://api.groq.com/openai/v1`, model `whisper-large-v3`) with your API key.
+3. Add friends' names and game terms to *Names & words* so they're spelled right, and use *Auto-corrections* for anything it keeps mishearing.
+4. Turn the card on. In-game, open a friend's chat (1080p layout), then on the controller:
+
+| Gesture on the **mic button** | Action |
+|---|---|
+| Hold, speak, release | Transcribes and types the text into the chat box (not sent yet) |
+| Tap | Send |
+| Double-tap | Discard the typed text |
+| Hold again | Discard and record a new take |
+
+A small overlay at the top of the screen shows listening / transcribing / the transcript. Downloads are stored in the app data folder (`whisper/`), settings in `voice.json` in the app config folder.
