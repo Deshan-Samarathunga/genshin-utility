@@ -1,0 +1,37 @@
+{
+  "branches": ["main"],
+  "tagFormat": "v${version}",
+  "plugins": [
+    ["@semantic-release/commit-analyzer", { "preset": "conventionalcommits" }],
+    ["@semantic-release/release-notes-generator", { "preset": "conventionalcommits" }],
+    ["@semantic-release/changelog", { "changelogFile": "CHANGELOG.md" }],
+    [
+      "@semantic-release/exec",
+      {
+        "prepareCmd": "node scripts/set-version.mjs ${nextRelease.version} && npm --prefix tauri-gui run tauri build"
+      }
+    ],
+    [
+      "@semantic-release/git",
+      {
+        "assets": [
+          "CHANGELOG.md",
+          "tauri-gui/package.json",
+          "tauri-gui/src-tauri/tauri.conf.json",
+          "tauri-gui/src-tauri/Cargo.toml",
+          "tauri-gui/src-tauri/Cargo.lock"
+        ],
+        "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+      }
+    ],
+    [
+      "@semantic-release/github",
+      {
+        "assets": [
+          { "path": "tauri-gui/src-tauri/target/release/bundle/nsis/*-setup.exe", "label": "Windows installer (setup.exe)" },
+          { "path": "tauri-gui/src-tauri/target/release/bundle/msi/*.msi", "label": "Windows installer (MSI)" }
+        ]
+      }
+    ]
+  ]
+}

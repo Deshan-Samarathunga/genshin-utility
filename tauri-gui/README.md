@@ -63,3 +63,21 @@ Type to friends in Genshin's chat from the couch using the DualSense's built-in 
 | Hold again | Discard and record a new take |
 
 A small overlay at the top of the screen shows listening / transcribing / the transcript. Downloads are stored in the app data folder (`whisper/`), settings in `voice.json` in the app config folder.
+
+## Commits & releases
+
+Run `npm install` once at the **repository root** to enable the git hooks (husky):
+
+- **commit-msg** — messages must follow [Conventional Commits](https://www.conventionalcommits.org/), e.g. `feat: add tray icon`, `fix: double tap not detected`, `chore: update deps`.
+- **pre-commit** — checks the frontend JS parses and the Rust backend compiles.
+
+Releases are automatic: on every push to `main`, [semantic-release](https://semantic-release.gitbook.io/) (`.github/workflows/release.yml`) reads the commits since the last release and
+
+| Commit type | Version bump |
+|---|---|
+| `fix:` | patch (1.0.**1**) |
+| `feat:` | minor (1.**1**.0) |
+| `feat!:` or a `BREAKING CHANGE:` footer | major (**2**.0.0) |
+| `chore:`, `docs:`, `ci:`, `refactor:` … | no release |
+
+When a release is due it updates the version in `package.json`, `tauri.conf.json` and `Cargo.toml`, writes `CHANGELOG.md`, builds the Windows installers and publishes them on the GitHub Releases page.

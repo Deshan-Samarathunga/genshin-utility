@@ -1,0 +1,56 @@
+# On every push to main, semantic-release reads the Conventional Commits since the last tag.
+# If a release is due it bumps the version, updates CHANGELOG.md, builds the Windows installers
+# and publishes them as a GitHub Release. Pushes with only chore/docs/ci commits release nothing.
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    env:
+      # Hooks are for local commits; the bot's own release commit must not run them.
+      HUSKY: 0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            tauri-gui/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: tauri-gui/src-tauri -> target
+
+      - name: Install release tooling
+        run: npm ci
+
+      - name: Install app dependencies
+        run: npm ci
+        working-directory: tauri-gui
+
+      - name: Release
+        run: npx semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -5,3 +5,4 @@ venv/
 tauri-gui/node_modules/
 tauri-gui/src-tauri/target/
 tauri-gui/dist/
+node_modules/
