@@ -857,3 +857,44 @@ input:active + .slider {
     animation: none !important;
   }
 }
+
+/* Settings export/import, above the "Open with Genshin" toggle */
+.sidebar-backup {
+  margin-top: auto;
+  display: flex;
+  gap: 6px;
+  padding: 12px 12px 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.sidebar-backup + .sidebar-option {
+  margin-top: 0;
+  border-top: none;
+}
+
+.sidebar-backup button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 0;
+  background-color: var(--canvas);
+  border: 1px solid var(--hairline);
+  border-radius: 0px; /* SHARP */
+  color: var(--body);
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+}
+
+.sidebar-backup button:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--primary);
+}
+
+.sidebar-backup button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

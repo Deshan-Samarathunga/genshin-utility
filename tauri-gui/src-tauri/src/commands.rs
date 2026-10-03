@@ -85,6 +85,23 @@ pub async fn set_dialogue_speed(speed: u64, state: State<'_, AppState>) -> Resul
     Ok(())
 }
 
+/// Saves all settings to a JSON file the user picks. `ui` carries the page-side settings.
+#[tauri::command]
+pub async fn export_settings(
+    app: AppHandle,
+    ui: serde_json::Value,
+    exported_at: String,
+    file_name: String,
+) -> Result<Option<String>, String> {
+    crate::backup::export(app, ui, exported_at, file_name).await
+}
+
+/// Loads a settings file the user picks; returns the page-side settings to apply.
+#[tauri::command]
+pub async fn import_settings(app: AppHandle) -> Result<Option<serde_json::Value>, String> {
+    crate::backup::import(app).await
+}
+
 /// Whether "Open with Genshin" is on (reads Task Scheduler).
 #[tauri::command]
 pub fn get_auto_open() -> bool {

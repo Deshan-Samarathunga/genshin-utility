@@ -130,6 +130,87 @@ function updateTabDot(scriptName, on) {
   if (dot) dot.classList.toggle('on', on);
 }
 
+// ── Page settings that live in the browser (kept across restarts, included in backups) ─────
+
+const UI_SETTINGS_KEY = 'genshin-utility.ui';
+// Settings key -> input id.
+const UI_FIELDS = {
+  dialogue_speed: 'dialogue-speed',
+  auto_message_text: 'auto-message-text',
+  auto_message_count: 'auto-message-count',
+};
+
+function readUiSettings() {
+  const ui = {};
+  for (const [key, id] of Object.entries(UI_FIELDS)) {
+    const input = document.getElementById(id);
+    if (input) ui[key] = input.type === 'number' ? Number(input.value) : input.value;
+  }
+  return ui;
+}
+
+function saveUiSettings() {
+  localStorage.setItem(UI_SETTINGS_KEY, JSON.stringify(readUiSettings()));
+}
+
+async function restoreUiSettings() {
+  let saved = {};
+  try {
+    saved = JSON.parse(localStorage.getItem(UI_SETTINGS_KEY) || '{}');
+  } catch {
+    saved = {};
+  }
+  for (const [key, id] of Object.entries(UI_FIELDS)) {
+    const input = document.getElementById(id);
+    if (!input) continue;
+    if (saved[key] !== undefined && saved[key] !== null) input.value = saved[key];
+    input.addEventListener('change', saveUiSettings);
+  }
+  const speed = Number(saved.dialogue_speed);
+  if (speed >= 50) {
+    await invoke('set_dialogue_speed', { speed }).catch(console.error);
+  }
+}
+
+function initBackup() {
+  const exportBtn = document.getElementById('settings-export');
+  const importBtn = document.getElementById('settings-import');
+  if (!exportBtn || !importBtn) return;
+
+  exportBtn.addEventListener('click', async () => {
+    exportBtn.disabled = true;
+    try {
+      const now = new Date();
+      const date = now.toISOString().slice(0, 10);
+      const path = await invoke('export_settings', {
+        ui: readUiSettings(),
+        exportedAt: now.toISOString(),
+        fileName: `genshin-utility-settings-${date}.json`,
+      });
+      if (path) setStatus('Settings exported (includes API keys — keep the file private)');
+    } catch (error) {
+      setStatus(`Export error: ${error}`);
+    }
+    exportBtn.disabled = false;
+  });
+
+  importBtn.addEventListener('click', async () => {
+    importBtn.disabled = true;
+    try {
+      const ui = await invoke('import_settings');
+      if (ui) {
+        localStorage.setItem(UI_SETTINGS_KEY, JSON.stringify(ui || {}));
+        // Reload so every field and toggle picks up the imported values.
+        window.location.reload();
+        return;
+      }
+    } catch (error) {
+      setStatus(`Import error: ${error}`);
+    }
+    importBtn.disabled = false;
+  });
+}
+
 async function initAutoOpen() {
   const toggle = document.getElementById('toggle-auto-open');
   if (!toggle) return;
@@ -163,6 +244,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initScaling().catch((error) => console.error('Window scaling unavailable:', error));
   initTabs();
   initAutoOpen();
+  initBackup();
+  restoreUiSettings();
 
   const checkboxes = document.querySelectorAll('input[type="checkbox"][data-script]');
   checkboxes.forEach(checkbox => {

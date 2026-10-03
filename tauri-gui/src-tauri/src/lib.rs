@@ -1,4 +1,5 @@
 pub mod autostart;
+pub mod backup;
 pub mod commands;
 pub mod hook;
 pub mod macros;
@@ -19,6 +20,7 @@ pub fn run() {
             autostart::show_main_window(app, true);
         }))
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             autostart::refresh();
             let background = std::env::args().any(|a| a == autostart::BACKGROUND_ARG);
@@ -75,6 +77,8 @@ pub fn run() {
             commands::voice_download,
             commands::get_auto_open,
             commands::set_auto_open,
+            commands::export_settings,
+            commands::import_settings,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
