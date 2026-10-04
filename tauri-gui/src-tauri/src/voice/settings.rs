@@ -35,8 +35,12 @@ pub struct CloudConfig {
 pub struct VoiceSettings {
     /// "local" (whisper-server) or a cloud provider id from `PROVIDERS`.
     pub engine: String,
-    /// Substring of the input device name; empty = Windows default microphone.
+    /// Mic used with the controller's mic button: substring of the device name; empty = Windows default.
     pub mic_name: String,
+    /// Mic used with the keyboard/mouse push-to-talk key; empty = Windows default.
+    pub keyboard_mic_name: String,
+    /// Push-to-talk trigger: "off", "mouse4", "mouse5", "f9" .. "f12" (see `ptt::KEYS`).
+    pub ptt_key: String,
     /// Whisper language code ("en", "auto", ...).
     pub language: String,
     /// ggml model id, e.g. "small.en-q5_1" -> ggml-small.en-q5_1.bin
@@ -63,6 +67,8 @@ impl Default for VoiceSettings {
         let mut s = Self {
             engine: "local".into(),
             mic_name: "Wireless Controller".into(),
+            keyboard_mic_name: String::new(),
+            ptt_key: "mouse4".into(),
             language: "en".into(),
             local_model: "small.en-q5_1".into(),
             local_gpu: false,

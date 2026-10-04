@@ -5,11 +5,13 @@
 pub mod audio;
 pub mod controller;
 pub mod gesture;
+pub mod ptt;
 pub mod settings;
 pub mod setup;
 pub mod stt;
 
 use controller::PadEvent;
+use ptt::PttEvent;
 use gesture::{Action, Gesture, Input, State};
 use serde::Serialize;
 use settings::VoiceSettings;
@@ -182,16 +184,84 @@ fn spawn_injector() -> mpsc::Sender<InjectOp> {
     tx
 }
 
-fn open_recorder(app: &AppHandle, s: &VoiceSettings) -> Result<audio::Recorder, String> {
-    let r = audio::Recorder::start(&s.mic_name).map_err(|e| format!("Microphone: {e}"))?;
-    let wanted = s.mic_name.trim().to_lowercase();
-    let message = if !wanted.is_empty() && !r.device_name.to_lowercase().contains(&wanted) {
-        format!("“{}” not found — using {}", s.mic_name, r.device_name)
-    } else {
-        format!("Mic: {}", r.device_name)
-    };
-    emit(app, "idle", "", &message);
-    Ok(r)
+/// Which trigger started the current recording; it picks the microphone.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Source {
+    Controller,
+    Keyboard,
+}
+
+/// One microphone kept open (for the pre-roll) for a trigger source. Reopened when its setting
+/// changes, retried every few seconds if it can't be opened.
+struct MicSlot {
+    label: &'static str,
+    wanted: String,
+    recorder: Option<audio::Recorder>,
+    last_attempt: Option<Instant>,
+    last_error: String,
+    /// The wanted mic wasn't found and another one is in use; keep looking for the wanted one.
+    fallback: bool,
+}
+
+impl MicSlot {
+    fn new(label: &'static str) -> Self {
+        Self { label, wanted: String::new(), recorder: None, last_attempt: None, last_error: String::new(), fallback: false }
+    }
+
+    fn close(&mut self) {
+        self.recorder = None;
+        self.fallback = false;
+        self.last_attempt = None;
+        self.last_error.clear();
+    }
+
+    fn set_wanted(&mut self, name: &str) {
+        if self.wanted != name {
+            self.wanted = name.to_string();
+            self.close();
+        }
+    }
+
+    /// Opens the mic if it isn't open yet (at most every 5 s), reporting a new problem only once.
+    fn ensure(&mut self, app: &AppHandle) {
+        if !self.last_attempt.is_none_or(|t| t.elapsed() > Duration::from_secs(5)) {
+            return;
+        }
+        if self.recorder.is_some() {
+            // On a fallback mic: switch over as soon as the wanted one shows up (e.g. controller plugged in).
+            if !self.fallback {
+                return;
+            }
+            self.last_attempt = Some(Instant::now());
+            let wanted = self.wanted.trim().to_lowercase();
+            if !audio::input_device_names().iter().any(|n| n.to_lowercase().contains(&wanted)) {
+                return;
+            }
+            self.recorder = None;
+        }
+        self.last_attempt = Some(Instant::now());
+        match audio::Recorder::start(&self.wanted) {
+            Ok(r) => {
+                let wanted = self.wanted.trim().to_lowercase();
+                self.fallback = !wanted.is_empty() && !r.device_name.to_lowercase().contains(&wanted);
+                let message = if self.fallback {
+                    format!("{}: “{}” not found — using {} for now", self.label, self.wanted, r.device_name)
+                } else {
+                    format!("{}: {}", self.label, r.device_name)
+                };
+                emit(app, "idle", "", &message);
+                self.recorder = Some(r);
+                self.last_error.clear();
+            }
+            Err(e) => {
+                let e = format!("{}: {e}", self.label);
+                if e != self.last_error {
+                    emit(app, "error", "", &e);
+                    self.last_error = e;
+                }
+            }
+        }
+    }
 }
 
 /// Starts the controller reader and the orchestrator loop.
@@ -200,6 +270,8 @@ pub fn start(app: AppHandle, macro_state: AppState, voice: VoiceHandle) {
     let unmute = Arc::new(AtomicBool::new(false));
     let (pad_tx, mut pad_rx) = unbounded_channel::<PadEvent>();
     controller::spawn(enabled.clone(), unmute.clone(), pad_tx);
+    let (ptt_tx, mut ptt_rx) = unbounded_channel::<PttEvent>();
+    ptt::set_sender(ptt_tx);
     let injector = spawn_injector();
     // (transcript, seconds it took)
     let (done_tx, mut done_rx) = unbounded_channel::<Result<(String, f32), String>>();
@@ -207,27 +279,27 @@ pub fn start(app: AppHandle, macro_state: AppState, voice: VoiceHandle) {
     tauri::async_runtime::spawn(async move {
         let epoch = Instant::now();
         let mut gesture = Gesture::default();
-        let mut recorder: Option<audio::Recorder> = None;
-        let mut last_mic_attempt: Option<Instant> = None;
-        let mut last_mic_error = String::new();
-        let mut opened_mic = String::new();
+        let mut controller_mic = MicSlot::new("Controller mic");
+        let mut keyboard_mic = MicSlot::new("Keyboard mic");
+        let mut ptt_on = false;
+        let mut source = Source::Controller;
         // Character counts of the takes typed so far, newest last; each double-tap undoes one.
         let mut takes: Vec<usize> = Vec::new();
         let mut tick = tokio::time::interval(Duration::from_millis(25));
 
         loop {
-            let input = tokio::select! {
-                _ = tick.tick() => Some(Input::Tick),
+            // (input, the trigger it came from)
+            let event = tokio::select! {
+                _ = tick.tick() => Some((Input::Tick, None)),
                 Some(event) = pad_rx.recv() => match event {
-                    PadEvent::MicDown => Some(Input::Down),
-                    PadEvent::MicUp => Some(Input::Up),
+                    PadEvent::MicDown => Some((Input::Down, Some(Source::Controller))),
+                    PadEvent::MicUp => Some((Input::Up, Some(Source::Controller))),
                     PadEvent::Connected(connected) => {
                         if connected {
                             // The controller's mic shows up as an audio device a moment after the HID
-                            // device; reopen the mic ~2 s from now to pick it up.
-                            recorder = None;
-                            last_mic_attempt = Instant::now().checked_sub(Duration::from_secs(3));
-                            last_mic_error.clear();
+                            // device; reopen it ~2 s from now to pick it up.
+                            controller_mic.close();
+                            controller_mic.last_attempt = Instant::now().checked_sub(Duration::from_secs(3));
                             emit(&app, "idle", "", "Controller connected");
                         } else {
                             emit(&app, "error", "", "Controller disconnected");
@@ -235,12 +307,16 @@ pub fn start(app: AppHandle, macro_state: AppState, voice: VoiceHandle) {
                         None
                     }
                 },
+                Some(event) = ptt_rx.recv() => Some(match event {
+                    PttEvent::Down => (Input::Down, Some(Source::Keyboard)),
+                    PttEvent::Up => (Input::Up, Some(Source::Keyboard)),
+                }),
                 Some(result) = done_rx.recv() => {
                     if gesture.state == State::Transcribing {
                         gesture.transcribe_done();
                         match result {
                             Ok((text, _)) if text.is_empty() => {
-                                emit(&app, "info", "", "Didn't catch that — hold the mic button and try again");
+                                emit(&app, "info", "", "Didn't catch that — hold the button and try again");
                             }
                             Ok((text, secs)) if crate::hook::is_genshin_active() => {
                                 // Typed at the end with a trailing space, so the next take continues the
@@ -270,8 +346,10 @@ pub fn start(app: AppHandle, macro_state: AppState, voice: VoiceHandle) {
                 gesture.reset();
                 takes.clear();
                 set_overlay_visible(&app, want);
+                controller_mic.close();
+                keyboard_mic.close();
                 if want {
-                    last_mic_attempt = None;
+                    voice.reload.store(true, Ordering::Relaxed); // apply mic + key settings below
                     let s = voice.settings();
                     if s.is_local() {
                         // Warm up whisper-server so the first message isn't slow.
@@ -282,14 +360,14 @@ pub fn start(app: AppHandle, macro_state: AppState, voice: VoiceHandle) {
                             match voice.ensure_server(&s).await {
                                 Ok(_) => match voice.gpu_warning(&s) {
                                     Some(warning) => emit(&app, "error", "", &warning),
-                                    None => emit(&app, "idle", "", "Speech engine ready — hold the mic button to talk"),
+                                    None => emit(&app, "idle", "", "Speech engine ready — hold the button to talk"),
                                 },
                                 Err(e) => emit(&app, "error", "", &e),
                             }
                         });
                     }
                 } else {
-                    recorder = None;
+                    ptt::configure("off", false);
                     // May wait for an in-progress warm-up, so don't block the loop on it.
                     let voice = voice.clone();
                     tauri::async_runtime::spawn(async move { voice.stop_server().await });
@@ -300,54 +378,60 @@ pub fn start(app: AppHandle, macro_state: AppState, voice: VoiceHandle) {
                 continue;
             }
 
-            if voice.reload.swap(false, Ordering::Relaxed) && voice.settings().mic_name != opened_mic {
-                recorder = None;
-                last_mic_attempt = None;
-                last_mic_error.clear();
-            }
-            if recorder.is_none()
-                && gesture.state == State::Idle
-                && last_mic_attempt.is_none_or(|t| t.elapsed() > Duration::from_secs(5))
-            {
-                last_mic_attempt = Some(Instant::now());
+            if voice.reload.swap(false, Ordering::Relaxed) {
                 let s = voice.settings();
-                match open_recorder(&app, &s) {
-                    Ok(r) => {
-                        recorder = Some(r);
-                        opened_mic = s.mic_name;
-                        last_mic_error.clear();
-                    }
-                    // Retries every few seconds; only report a new problem once.
-                    Err(e) if e != last_mic_error => {
-                        emit(&app, "error", "", &e);
-                        last_mic_error = e;
-                    }
-                    Err(_) => {}
+                controller_mic.set_wanted(&s.mic_name);
+                keyboard_mic.set_wanted(&s.keyboard_mic_name);
+                ptt_on = ptt::code_for(&s.ptt_key) != 0;
+                ptt::configure(&s.ptt_key, true);
+                if !ptt_on {
+                    keyboard_mic.close();
+                }
+            }
+            if gesture.state == State::Idle {
+                controller_mic.ensure(&app);
+                if ptt_on {
+                    keyboard_mic.ensure(&app);
                 }
             }
 
-            let Some(input) = input else { continue };
+            let Some((input, from)) = event else { continue };
+            if let Some(from) = from {
+                // A new press picks the source; presses/releases from the other trigger mid-gesture
+                // are ignored.
+                if input == Input::Down && matches!(gesture.state, State::Idle | State::Tapped { .. }) {
+                    source = from;
+                } else if from != source {
+                    continue;
+                }
+            }
+            let mic = match source {
+                Source::Controller => &controller_mic,
+                Source::Keyboard => &keyboard_mic,
+            };
             let now = epoch.elapsed().as_millis() as u64;
             for action in gesture.step(input, now) {
                 match action {
                     Action::StartRecording => {
-                        // The press may have muted the controller mic; switch it back on.
-                        unmute.store(true, Ordering::Relaxed);
-                        if let Some(r) = &recorder {
+                        if source == Source::Controller {
+                            // The press may have muted the controller mic; switch it back on.
+                            unmute.store(true, Ordering::Relaxed);
+                        }
+                        if let Some(r) = &mic.recorder {
                             r.begin();
                         }
                         emit(&app, "listening", "", "Listening… release to finish");
                     }
                     Action::CancelRecording => {
-                        if let Some(r) = &recorder {
+                        if let Some(r) = &mic.recorder {
                             r.end();
                         }
                         emit(&app, "idle", "", "");
                     }
                     Action::StopAndTranscribe => {
                         emit(&app, "transcribing", "", "Transcribing…");
-                        let Some(r) = &recorder else {
-                            let _ = done_tx.send(Err("Microphone not available".into()));
+                        let Some(r) = &mic.recorder else {
+                            let _ = done_tx.send(Err(format!("{} not available", mic.label)));
                             continue;
                         };
                         let (samples, rate) = r.end();

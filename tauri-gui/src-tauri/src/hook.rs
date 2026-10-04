@@ -7,7 +7,8 @@ use windows::Win32::System::ProcessStatus::GetProcessImageFileNameW;
 use windows::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION};
 use windows::Win32::UI::WindowsAndMessaging::{
     CallNextHookEx, GetForegroundWindow, GetMessageW, GetWindowThreadProcessId, SetWindowsHookExW,
-    UnhookWindowsHookEx, HHOOK, KBDLLHOOKSTRUCT, WH_KEYBOARD_LL, WM_KEYDOWN, WM_SYSKEYDOWN,
+    UnhookWindowsHookEx, HHOOK, KBDLLHOOKSTRUCT, MSLLHOOKSTRUCT, WH_KEYBOARD_LL, WH_MOUSE_LL, WM_KEYDOWN,
+    WM_KEYUP, WM_SYSKEYDOWN, WM_SYSKEYUP, WM_XBUTTONDOWN, WM_XBUTTONUP,
 };
 
 use crate::state::AppState;
@@ -32,6 +33,11 @@ pub fn init_hook(state: AppState, handle: tokio::runtime::Handle) {
                 eprintln!("Failed to install keyboard hook");
                 return;
             }
+            // Mouse side buttons for voice push-to-talk.
+            let mouse_hook = SetWindowsHookExW(WH_MOUSE_LL, Some(mouse_hook_proc), None, 0);
+            if mouse_hook.is_err() {
+                eprintln!("Failed to install mouse hook");
+            }
 
             let mut msg = std::mem::zeroed();
             while GetMessageW(&mut msg, None, 0, 0).into() {
@@ -39,6 +45,9 @@ pub fn init_hook(state: AppState, handle: tokio::runtime::Handle) {
             }
 
             let _ = UnhookWindowsHookEx(hook.unwrap());
+            if let Ok(mouse_hook) = mouse_hook {
+                let _ = UnhookWindowsHookEx(mouse_hook);
+            }
         }
     });
 }
@@ -65,7 +74,38 @@ pub(crate) fn is_genshin_active() -> bool {
     false
 }
 
+unsafe extern "system" fn mouse_hook_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) -> LRESULT {
+    if n_code >= 0 {
+        let msg = w_param.0 as u32;
+        if msg == WM_XBUTTONDOWN || msg == WM_XBUTTONUP {
+            let info = *(l_param.0 as *const MSLLHOOKSTRUCT);
+            // High word of mouseData: 1 = XBUTTON1 (Mouse 4, "back"), 2 = XBUTTON2 (Mouse 5).
+            let code = if (info.mouseData >> 16) & 0xFFFF == 1 {
+                crate::voice::ptt::MOUSE4
+            } else {
+                crate::voice::ptt::MOUSE5
+            };
+            if crate::voice::ptt::handle(code, msg == WM_XBUTTONDOWN) {
+                return LRESULT(1);
+            }
+        }
+    }
+    CallNextHookEx(None, n_code, w_param, l_param)
+}
+
 unsafe extern "system" fn keyboard_hook_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) -> LRESULT {
+    // Voice push-to-talk key (needs both press and release).
+    if n_code >= 0 {
+        let msg = w_param.0 as u32;
+        let down = msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN;
+        if down || msg == WM_KEYUP || msg == WM_SYSKEYUP {
+            let vk = (*(l_param.0 as *const KBDLLHOOKSTRUCT)).vkCode;
+            if crate::voice::ptt::handle(vk, down) {
+                return LRESULT(1);
+            }
+        }
+    }
+
     if n_code >= 0 && (w_param.0 as u32 == WM_KEYDOWN || w_param.0 as u32 == WM_SYSKEYDOWN) {
         let kb_struct = *(l_param.0 as *const KBDLLHOOKSTRUCT);
         let vk_code = kb_struct.vkCode;
