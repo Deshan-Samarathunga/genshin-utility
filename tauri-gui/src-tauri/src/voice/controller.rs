@@ -18,6 +18,17 @@ pub enum PadEvent {
     MicUp,
 }
 
+/// USB output report that switches the controller's built-in mic back on and its mute LED off.
+/// The mic button also toggles the firmware's mic mute, which silenced every other recording.
+fn unmute_report() -> [u8; 48] {
+    let mut report = [0u8; 48];
+    report[0] = 0x02; // output report id (USB)
+    report[2] = 0x01 | 0x02; // valid_flag1: mic-mute LED + power-save (mic mute) control
+    report[9] = 0x00; // mute button LED off
+    report[10] = 0x00; // power_save_control: clear MIC_MUTE (bit 4)
+    report
+}
+
 /// Mic button state from an input report, or None for reports we don't understand.
 fn mic_pressed(report: &[u8]) -> Option<bool> {
     match report.first()? {
@@ -39,7 +50,8 @@ fn open_pad(api: &mut HidApi) -> Option<HidDevice> {
 }
 
 /// Spawns the reader thread. It only holds the device open while `enabled` is set.
-pub fn spawn(enabled: Arc<AtomicBool>, tx: UnboundedSender<PadEvent>) {
+/// Setting `unmute` asks it to switch the controller's mic back on (checked every ~50 ms).
+pub fn spawn(enabled: Arc<AtomicBool>, unmute: Arc<AtomicBool>, tx: UnboundedSender<PadEvent>) {
     thread::spawn(move || {
         let mut api = match HidApi::new() {
             Ok(api) => api,
@@ -61,10 +73,14 @@ pub fn spawn(enabled: Arc<AtomicBool>, tx: UnboundedSender<PadEvent>) {
                 continue;
             };
             let _ = tx.send(PadEvent::Connected(true));
+            let _ = device.write(&unmute_report());
             let mut pressed = false;
 
             while enabled.load(Ordering::Relaxed) {
-                match device.read_timeout(&mut buf, 200) {
+                if unmute.swap(false, Ordering::Relaxed) {
+                    let _ = device.write(&unmute_report());
+                }
+                match device.read_timeout(&mut buf, 50) {
                     Ok(0) => {}
                     Ok(n) => {
                         if let Some(now_pressed) = mic_pressed(&buf[..n]) {
@@ -89,6 +105,12 @@ pub fn spawn(enabled: Arc<AtomicBool>, tx: UnboundedSender<PadEvent>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn unmute_report_layout() {
+        let r = unmute_report();
+        assert_eq!((r[0], r[1], r[2], r[10]), (0x02, 0x00, 0x03, 0x00));
+    }
 
     #[test]
     fn parses_usb_and_bt_reports() {

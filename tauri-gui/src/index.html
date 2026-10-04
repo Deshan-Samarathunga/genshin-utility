@@ -50,7 +50,7 @@
               Import
             </button>
           </div>
-          <label class="sidebar-option" title="Starts hidden when you sign in to Windows and opens when Genshin starts. Closing the window then hides it to the tray.">
+          <label class="sidebar-option" title="Windows opens this app whenever Genshin starts, even if the app is closed. Nothing runs in the background.">
             <span>Open with Genshin</span>
             <span class="switch switch-sm">
               <input type="checkbox" id="toggle-auto-open">
@@ -113,7 +113,7 @@
           <div class="script-info">
             <h2>Voice Chat (PS5)</h2>
             <p>Talk into the DualSense mic and it types into the open chat box</p>
-            <p class="hotkey-hint"><strong>Controller:</strong> Hold <kbd>Mic</kbd> to speak · tap to send · double-tap to discard · hold again to redo.</p>
+            <p class="hotkey-hint"><strong>Controller:</strong> Hold <kbd>Mic</kbd> to speak — it's typed at the end of the chat box, so hold again to add more · double-tap to undo sentences one by one. Send with the game's controls.</p>
             <p class="voice-last" id="voice-last">Open a friend's chat in-game, then hold the mic button.</p>
 
             <details class="voice-settings">
@@ -176,12 +176,26 @@
                   <p class="voice-note">The highlighted row is the engine in use. Keys are stored on this PC only (voice.json in the app config folder).</p>
                 </div>
 
-                <label>Names &amp; words to spell correctly
-                  <textarea id="voice-vocabulary" rows="3" placeholder="Wriothesley, Chasca, duqs, Kazuto..."></textarea>
-                </label>
-                <label>Auto-corrections (one per line: <code>heard =&gt; wanted</code>)
-                  <textarea id="voice-replacements" rows="2" placeholder="riot fishy => Wriothesley"></textarea>
-                </label>
+                <div class="voice-vocab">
+                  <span>Names &amp; words to spell correctly</span>
+                  <div class="vocab-box" id="voice-vocab-box">
+                    <div class="vocab-chips" id="voice-vocab-chips"></div>
+                    <input type="text" id="voice-vocab-input" placeholder="Type a name and press Enter" spellcheck="false" autocomplete="off" />
+                  </div>
+                  <p class="voice-note"><span id="voice-vocab-count"></span> Add your friends' names here. Newest names are kept first if the list gets long.</p>
+                </div>
+                <div class="voice-corrections">
+                  <span>Auto-corrections</span>
+                  <div class="voice-table-wrap">
+                    <table class="voice-table voice-corrections-table">
+                      <thead>
+                        <tr><th>Heard</th><th></th><th>Wanted</th><th></th></tr>
+                      </thead>
+                      <tbody id="voice-correction-rows"></tbody>
+                    </table>
+                  </div>
+                  <p class="voice-note">Type a word or phrase it mishears and what it should become. Capitals don't matter.</p>
+                </div>
               </div>
             </details>
           </div>

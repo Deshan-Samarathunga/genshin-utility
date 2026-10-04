@@ -5,7 +5,7 @@ const textEl = document.getElementById('text');
 const messageEl = document.getElementById('message');
 
 // States that stay on screen until the next state change; the rest fade out on their own.
-const STICKY = new Set(['listening', 'transcribing', 'draft', 'loading']);
+const STICKY = new Set(['listening', 'transcribing', 'loading']);
 const HIDDEN = new Set(['disabled', 'idle']);
 let hideTimer = null;
 

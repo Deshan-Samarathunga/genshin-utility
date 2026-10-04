@@ -57,10 +57,9 @@ Type to friends in Genshin's chat from the couch using the DualSense's built-in 
 
 | Gesture on the **mic button** | Action |
 |---|---|
-| Hold, speak, release | Transcribes and types the text into the chat box (not sent yet) |
-| Tap | Send |
-| Double-tap | Discard the typed text |
-| Hold again | Discard and record a new take |
+| Hold, speak, release | Transcribes and types the text into the chat box (send it with the game's own controls) |
+| Double-tap | Undo the last typed sentence (repeat to undo earlier ones) |
+| Hold again | Speak another sentence; it's added after whatever is already in the chat box |
 
 A small overlay at the top of the screen shows listening / transcribing / the transcript. Downloads are stored in the app data folder (`whisper/`), settings in `voice.json` in the app config folder.
 

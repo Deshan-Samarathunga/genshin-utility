@@ -1,5 +1,6 @@
 //! Voice Chat (PS5): hold the DualSense mic button, speak, and the transcript is typed into
-//! Genshin's open chat box. Tap to send, double-tap to discard, hold to redo.
+//! Genshin's chat box, after whatever is already there. Double-tap undoes the last take; the user sends
+//! with the game's own controls.
 
 pub mod audio;
 pub mod controller;
@@ -23,7 +24,8 @@ use crate::state::AppState;
 
 // Chat panel coordinates at 1080p (same layout Auto Message uses).
 const CHAT_INPUT: (i32, i32) = (441, 1001);
-const CHAT_SEND: (i32, i32) = (1048, 1008);
+/// How many typed takes double-tap can undo, newest first.
+const MAX_UNDO: usize = 20;
 /// Recordings quieter than this are treated as silence and never sent to the engine.
 const SILENCE_RMS: f32 = 0.003;
 
@@ -131,7 +133,7 @@ impl VoiceState {
 
 #[derive(Serialize, Clone)]
 struct Status {
-    /// disabled | idle | listening | transcribing | draft | sent | discarded | info | error | loading
+    /// disabled | idle | listening | transcribing | typed | undone | info | error | loading
     state: &'static str,
     text: String,
     message: String,
@@ -145,9 +147,15 @@ fn emit(app: &AppHandle, state: &'static str, text: &str, message: &str) {
 }
 
 enum InjectOp {
-    Paste(String),
-    Send,
+    /// Type text at the end of the chat box.
+    Append(String),
     Backspace(usize),
+}
+
+/// Clicks the chat box and moves the caret to the end (a click can land mid-text).
+fn focus_chat_end() {
+    crate::macros::click_sequence(&[CHAT_INPUT], 120);
+    crate::macros::press_key(windows::Win32::UI::Input::KeyboardAndMouse::VK_END);
 }
 
 /// Keystrokes/clicks run on one thread so paste, send and discard can never interleave.
@@ -159,14 +167,13 @@ fn spawn_injector() -> mpsc::Sender<InjectOp> {
                 continue;
             }
             match op {
-                InjectOp::Paste(text) => {
-                    crate::macros::click_sequence(&[CHAT_INPUT], 150);
+                InjectOp::Append(text) => {
+                    focus_chat_end();
                     crate::macros::paste_text(&text);
                 }
-                InjectOp::Send => crate::macros::click_sequence(&[CHAT_SEND], 100),
                 InjectOp::Backspace(n) => {
-                    // Re-focus the input first so the deletes can't land anywhere else.
-                    crate::macros::click_sequence(&[CHAT_INPUT], 100);
+                    // Delete from the end, where the last take was typed.
+                    focus_chat_end();
                     crate::macros::backspace(n);
                 }
             }
@@ -190,8 +197,9 @@ fn open_recorder(app: &AppHandle, s: &VoiceSettings) -> Result<audio::Recorder, 
 /// Starts the controller reader and the orchestrator loop.
 pub fn start(app: AppHandle, macro_state: AppState, voice: VoiceHandle) {
     let enabled = Arc::new(AtomicBool::new(false));
+    let unmute = Arc::new(AtomicBool::new(false));
     let (pad_tx, mut pad_rx) = unbounded_channel::<PadEvent>();
-    controller::spawn(enabled.clone(), pad_tx);
+    controller::spawn(enabled.clone(), unmute.clone(), pad_tx);
     let injector = spawn_injector();
     // (transcript, seconds it took)
     let (done_tx, mut done_rx) = unbounded_channel::<Result<(String, f32), String>>();
@@ -203,7 +211,8 @@ pub fn start(app: AppHandle, macro_state: AppState, voice: VoiceHandle) {
         let mut last_mic_attempt: Option<Instant> = None;
         let mut last_mic_error = String::new();
         let mut opened_mic = String::new();
-        let mut draft = String::new();
+        // Character counts of the takes typed so far, newest last; each double-tap undoes one.
+        let mut takes: Vec<usize> = Vec::new();
         let mut tick = tokio::time::interval(Duration::from_millis(25));
 
         loop {
@@ -228,26 +237,27 @@ pub fn start(app: AppHandle, macro_state: AppState, voice: VoiceHandle) {
                 },
                 Some(result) = done_rx.recv() => {
                     if gesture.state == State::Transcribing {
+                        gesture.transcribe_done();
                         match result {
                             Ok((text, _)) if text.is_empty() => {
-                                gesture.transcribe_done(false);
                                 emit(&app, "info", "", "Didn't catch that — hold the mic button and try again");
                             }
                             Ok((text, secs)) if crate::hook::is_genshin_active() => {
-                                let _ = injector.send(InjectOp::Paste(text.clone()));
-                                draft = text;
-                                gesture.transcribe_done(true);
-                                let message = format!("{secs:.1}s · Tap mic to send · double-tap to discard · hold to redo");
-                                emit(&app, "draft", &draft, &message);
+                                // Typed at the end with a trailing space, so the next take continues the
+                                // sentence whether or not the box already had text in it.
+                                let typed = format!("{text} ");
+                                takes.push(typed.chars().count());
+                                if takes.len() > MAX_UNDO {
+                                    takes.remove(0);
+                                }
+                                let _ = injector.send(InjectOp::Append(typed));
+                                let message = format!("{secs:.1}s · Hold to add more · double-tap to undo");
+                                emit(&app, "typed", &text, &message);
                             }
                             Ok((text, secs)) => {
-                                gesture.transcribe_done(false);
                                 emit(&app, "info", &text, &format!("{secs:.1}s · Genshin isn't focused — not typed"));
                             }
-                            Err(e) => {
-                                gesture.transcribe_done(false);
-                                emit(&app, "error", "", &e);
-                            }
+                            Err(e) => emit(&app, "error", "", &e),
                         }
                     }
                     None
@@ -258,7 +268,7 @@ pub fn start(app: AppHandle, macro_state: AppState, voice: VoiceHandle) {
             if want != enabled.load(Ordering::Relaxed) {
                 enabled.store(want, Ordering::Relaxed);
                 gesture.reset();
-                draft.clear();
+                takes.clear();
                 set_overlay_visible(&app, want);
                 if want {
                     last_mic_attempt = None;
@@ -321,21 +331,18 @@ pub fn start(app: AppHandle, macro_state: AppState, voice: VoiceHandle) {
             for action in gesture.step(input, now) {
                 match action {
                     Action::StartRecording => {
+                        // The press may have muted the controller mic; switch it back on.
+                        unmute.store(true, Ordering::Relaxed);
                         if let Some(r) = &recorder {
                             r.begin();
                         }
-                        // From a draft this might still turn out to be a tap, so stay quiet until it's a hold.
-                        if matches!(gesture.state, State::Recording { .. }) {
-                            emit(&app, "listening", "", "Listening… release to finish");
-                        }
+                        emit(&app, "listening", "", "Listening… release to finish");
                     }
                     Action::CancelRecording => {
                         if let Some(r) = &recorder {
                             r.end();
                         }
-                        if gesture.state == State::Idle {
-                            emit(&app, "idle", "", "");
-                        }
+                        emit(&app, "idle", "", "");
                     }
                     Action::StopAndTranscribe => {
                         emit(&app, "transcribing", "", "Transcribing…");
@@ -352,20 +359,17 @@ pub fn start(app: AppHandle, macro_state: AppState, voice: VoiceHandle) {
                             let _ = done_tx.send(result.map(|text| (text, started.elapsed().as_secs_f32())));
                         });
                     }
-                    Action::Send => {
-                        let _ = injector.send(InjectOp::Send);
-                        emit(&app, "sent", &draft, "Sent");
-                        draft.clear();
-                    }
-                    Action::Discard => {
-                        let _ = injector.send(InjectOp::Backspace(draft.chars().count() + 2));
-                        if matches!(gesture.state, State::Recording { .. }) {
-                            emit(&app, "listening", "", "Discarded — listening for a new take…");
-                        } else {
-                            emit(&app, "discarded", "", "Discarded");
+                    Action::UndoLast => match takes.pop() {
+                        Some(count) => {
+                            let _ = injector.send(InjectOp::Backspace(count));
+                            let message = match takes.len() {
+                                0 => "Removed the sentence".to_string(),
+                                n => format!("Removed the last sentence · double-tap again to remove {n} more"),
+                            };
+                            emit(&app, "undone", "", &message);
                         }
-                        draft.clear();
-                    }
+                        None => emit(&app, "info", "", "Nothing to undo"),
+                    },
                 }
             }
         }

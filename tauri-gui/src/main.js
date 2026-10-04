@@ -222,8 +222,13 @@ async function initAutoOpen() {
   toggle.addEventListener('change', async () => {
     toggle.disabled = true;
     try {
-      toggle.checked = await invoke('set_auto_open', { enabled: toggle.checked });
-      setStatus(toggle.checked ? 'Will open with Genshin (closing now hides to tray)' : 'Open with Genshin turned off');
+      const result = await invoke('set_auto_open', { enabled: toggle.checked });
+      toggle.checked = result.enabled;
+      if (result.enabled) {
+        setStatus(`Will open when Genshin starts (${result.game_path || 'GenshinImpact.exe'})`);
+      } else {
+        setStatus('Open with Genshin turned off');
+      }
     } catch (error) {
       toggle.checked = !toggle.checked;
       setStatus(`Error: ${error}`);
@@ -282,8 +287,6 @@ const voiceFields = {
   mic_name: 'voice-mic',
   language: 'voice-language',
   local_model: 'voice-model',
-  vocabulary: 'voice-vocabulary',
-  replacements: 'voice-replacements',
 };
 
 const PROVIDER_INFO = {
@@ -351,12 +354,160 @@ function readVoiceForm() {
     next[key] = voiceEl(id).value;
   }
   next.local_gpu = voiceEl('voice-gpu').checked;
+  next.replacements = readCorrections();
+  next.vocabulary = vocabWords.join(', ');
   // Every provider's row in the keys table.
   document.querySelectorAll('#voice-provider-rows input[data-field]').forEach((input) => {
     const id = input.dataset.provider;
     next.cloud[id] = { ...next.cloud[id], [input.dataset.field]: input.value.trim() };
   });
   return next;
+}
+
+// ── Names & words chips (stored as a comma-separated list) ──
+
+let vocabWords = [];
+
+function splitWords(text) {
+  return (text || '').split(/[,\n]/).map((w) => w.trim()).filter(Boolean);
+}
+
+function renderVocab() {
+  const box = voiceEl('voice-vocab-chips');
+  box.innerHTML = '';
+  vocabWords.forEach((word, index) => {
+    const chip = document.createElement('span');
+    chip.className = 'vocab-chip';
+    chip.textContent = word;
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.title = `Remove ${word}`;
+    remove.textContent = '✕';
+    remove.addEventListener('click', () => {
+      vocabWords.splice(index, 1);
+      renderVocab();
+      saveVoiceSettings();
+    });
+    chip.append(remove);
+    box.append(chip);
+  });
+  voiceEl('voice-vocab-count').textContent = `${vocabWords.length} words.`;
+}
+
+// Adds every comma-separated word in `text`, skipping duplicates (case-insensitive).
+function addVocab(text) {
+  const known = new Set(vocabWords.map((w) => w.toLowerCase()));
+  let added = false;
+  for (const word of splitWords(text)) {
+    if (!known.has(word.toLowerCase())) {
+      vocabWords.push(word);
+      known.add(word.toLowerCase());
+      added = true;
+    }
+  }
+  if (added) {
+    renderVocab();
+    saveVoiceSettings();
+  }
+}
+
+function initVocab() {
+  vocabWords = splitWords(voiceSettings.vocabulary);
+  renderVocab();
+  const input = voiceEl('voice-vocab-input');
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      addVocab(input.value);
+      input.value = '';
+    } else if (e.key === 'Backspace' && !input.value && vocabWords.length) {
+      vocabWords.pop();
+      renderVocab();
+      saveVoiceSettings();
+    }
+  });
+  // Pasting "a, b, c" adds them all at once.
+  input.addEventListener('paste', (e) => {
+    const text = e.clipboardData.getData('text');
+    if (/[,\n]/.test(text)) {
+      e.preventDefault();
+      addVocab(text);
+    }
+  });
+  input.addEventListener('blur', () => {
+    addVocab(input.value);
+    input.value = '';
+  });
+  voiceEl('voice-vocab-box').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget || e.target.id === 'voice-vocab-chips') input.focus();
+  });
+}
+
+// ── Auto-corrections table (stored as "heard => wanted" lines) ──
+
+function parseCorrections(text) {
+  return (text || '')
+    .split('\n')
+    .map((line) => {
+      const at = line.indexOf('=>');
+      return at < 0 ? null : [line.slice(0, at).trim(), line.slice(at + 2).trim()];
+    })
+    .filter((pair) => pair && pair[0]);
+}
+
+function readCorrections() {
+  return [...document.querySelectorAll('#voice-correction-rows tr')]
+    .map((row) => [...row.querySelectorAll('input')].map((input) => input.value.trim()))
+    .filter(([heard]) => heard)
+    .map(([heard, wanted]) => `${heard} => ${wanted}`)
+    .join('\n');
+}
+
+function addCorrectionRow(heard = '', wanted = '') {
+  const tbody = voiceEl('voice-correction-rows');
+  const row = document.createElement('tr');
+
+  const input = (value, placeholder) => {
+    const cell = document.createElement('td');
+    const field = document.createElement('input');
+    field.type = 'text';
+    field.value = value;
+    field.placeholder = placeholder;
+    field.spellcheck = false;
+    field.addEventListener('change', saveVoiceSettings);
+    // Typing into the last row adds a fresh empty row below it.
+    field.addEventListener('input', () => {
+      if (row === tbody.lastElementChild && field.value) addCorrectionRow();
+    });
+    cell.append(field);
+    return cell;
+  };
+
+  const arrow = document.createElement('td');
+  arrow.className = 'voice-arrow';
+  arrow.textContent = '→';
+
+  const remove = document.createElement('td');
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'voice-remove';
+  button.title = 'Remove';
+  button.textContent = '✕';
+  button.addEventListener('click', () => {
+    row.remove();
+    if (!tbody.children.length || tbody.lastElementChild.querySelector('input').value) addCorrectionRow();
+    saveVoiceSettings();
+  });
+  remove.append(button);
+
+  row.append(input(heard, 'heard'), arrow, input(wanted, 'wanted'), remove);
+  tbody.append(row);
+}
+
+function renderCorrections() {
+  voiceEl('voice-correction-rows').innerHTML = '';
+  for (const [heard, wanted] of parseCorrections(voiceSettings.replacements)) addCorrectionRow(heard, wanted);
+  addCorrectionRow(); // always one empty row to type into
 }
 
 function keyLink(url, text) {
@@ -552,6 +703,8 @@ async function initVoiceChat() {
   }
   voiceEl('voice-gpu').checked = voiceSettings.local_gpu;
   renderProviderTable();
+  renderCorrections();
+  initVocab();
   showProviderHint(voiceSettings.engine);
   showEngineSections();
   await loadMicList();
