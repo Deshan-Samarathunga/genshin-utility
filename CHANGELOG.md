@@ -1,3 +1,11 @@
+## [1.2.0](https://github.com/[secure]/genshin-utility/compare/v1.1.0...v1.2.0) (2026-10-04)
+
+### Features
+
+* install updates from inside the app ([6b7563e](https://github.com/[secure]/genshin-utility/commit/6b7563e3fd34f2a85dff9da9e771d3c2b95f9b84))
+* **ui:** settings tab, voice chat sub-tabs and a cleaner layout ([27a9e6a](https://github.com/[secure]/genshin-utility/commit/27a9e6a7f00eaf52cf4f8d1dfe43fe9641ad9834))
+* **voice:** push-to-talk for keyboard and mouse with a mic per device ([16a1ceb](https://github.com/[secure]/genshin-utility/commit/16a1ceb58a8ecc2eb8a84dd91a0fbe902b5bc574))
+
 ## [1.1.0](https://github.com/Deshan-Samarathunga/genshin-utility/compare/v1.0.0...v1.1.0) (2026-10-04)
 
 ### Features
