@@ -105,12 +105,23 @@ pub async fn import_settings(app: AppHandle) -> Result<Option<serde_json::Value>
 /// Whether "Open with Genshin" is on (reads Task Scheduler).
 #[tauri::command]
 pub fn get_auto_open() -> bool {
-    crate::autostart::refresh()
+    crate::autostart::is_enabled()
 }
 
+#[derive(serde::Serialize)]
+pub struct AutoOpenResult {
+    enabled: bool,
+    /// The game exe the launch task watches (set when just enabled).
+    game_path: Option<String>,
+}
+
+/// Turns "Open with Genshin" on/off. May show a file picker if the game can't be found.
 #[tauri::command]
-pub fn set_auto_open(enabled: bool) -> Result<bool, String> {
-    crate::autostart::set_enabled(enabled)
+pub async fn set_auto_open(enabled: bool, app: AppHandle) -> Result<AutoOpenResult, String> {
+    let (enabled, game_path) = tauri::async_runtime::spawn_blocking(move || crate::autostart::set_enabled(&app, enabled))
+        .await
+        .map_err(|e| e.to_string())??;
+    Ok(AutoOpenResult { enabled, game_path })
 }
 
 #[tauri::command]

@@ -50,7 +50,7 @@ pub async fn export(app: AppHandle, ui: serde_json::Value, exported_at: String, 
         app: APP_ID.into(),
         version: FORMAT_VERSION,
         exported_at,
-        open_with_genshin: crate::autostart::refresh(),
+        open_with_genshin: crate::autostart::is_enabled(),
         ui,
         voice: app.state::<VoiceHandle>().settings(),
     };
@@ -80,7 +80,11 @@ pub async fn import(app: AppHandle) -> Result<Option<serde_json::Value>, String>
     let backup = SettingsBackup::parse(&json)?;
 
     app.state::<VoiceHandle>().save_settings(backup.voice)?;
-    crate::autostart::set_enabled(backup.open_with_genshin)?;
+    let flag = backup.open_with_genshin;
+    let handle = app.clone();
+    tauri::async_runtime::spawn_blocking(move || crate::autostart::set_enabled(&handle, flag))
+        .await
+        .map_err(|e| e.to_string())??;
     Ok(Some(backup.ui))
 }
 
