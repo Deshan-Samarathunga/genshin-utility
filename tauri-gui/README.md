@@ -51,18 +51,18 @@ Builds are signed for the in-app updater, so `tauri build` needs the private key
 Type to friends in Genshin's chat by voice: from the couch with a DualSense, or at the desk with a
 headset and a push-to-talk key.
 
-1. **Controller:** connect the DualSense **by USB** (Windows only exposes the controller mic over USB) and use Genshin's native controller support (not Steam Input / DS4Windows).
+1. **Controller:** USB or Bluetooth, with Genshin's native controller support (not Steam Input / DS4Windows). Tap the **PS** button to start talking and tap it again to finish (don't hold it: a long PS press is the controller's own shortcut and can disconnect it over Bluetooth). The controller's own mic only works over USB; on Bluetooth, pick your headset as the *Controller mic* in Voice Chat → Controls & mics. The mic is only opened while you hold the button, so Bluetooth headsets stay in their normal audio mode the rest of the time.
    **Keyboard & mouse:** pick your push-to-talk key in *Settings* (Mouse 4 by default; Mouse 5 or F9–F12 also work).
 2. In the **Voice Chat** card, open *Settings*:
-   - **Controller mic** is used with the controller's mic button (default: the DualSense mic). **Keyboard & mouse mic** is used with the push-to-talk key — pick your headset there. Either can be any microphone.
+   - **Controller mic** is used with the controller's PS button (default: the DualSense mic). **Keyboard & mouse mic** is used with the push-to-talk key — pick your headset there. Either can be any microphone.
    - Pick an engine: **Local Whisper (offline)** — click *Download engine* and *Download model* (`small.en q5` for CPU, `large-v3-turbo q5` with *Use NVIDIA GPU*) — or a **cloud** provider (Groq, Gemini, Deepgram, ElevenLabs, Mistral, OpenAI, custom) with its API key in the keys table.
 3. Add friends' names and game terms to *Names & words* so they're spelled right, and use *Auto-corrections* for anything it keeps mishearing.
-4. Turn the card on. In-game, open a friend's chat (1080p layout), then use the controller's **mic button** or your **push-to-talk key**:
+4. Turn the card on. In-game, open a friend's chat (1080p layout), then tap the controller's **PS button** (tap again to finish) or hold your **push-to-talk key**:
 
 | Gesture | Action |
 |---|---|
-| Hold, speak, release | Transcribes and types the text at the end of the chat box (send it with the game's own controls) |
-| Hold again | Speak another sentence; it's added after whatever is already in the chat box |
+| Tap PS, speak, tap PS (or hold the key, speak, release) | Transcribes and types the text at the end of the chat box (send it with the game's own controls) |
+| Talk again | Speak another sentence; it's added after whatever is already in the chat box |
 | Double-tap | Undo the last typed sentence (repeat to undo earlier ones) |
 
 The push-to-talk key only acts while Genshin is in front and is hidden from the game. A small overlay at

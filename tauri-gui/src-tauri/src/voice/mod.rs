@@ -1,4 +1,4 @@
-//! Voice Chat (PS5): hold the DualSense mic button, speak, and the transcript is typed into
+//! Voice Chat (PS5): hold the DualSense PS button, speak, and the transcript is typed into
 //! Genshin's chat box, after whatever is already there. Double-tap undoes the last take; the user sends
 //! with the game's own controls.
 
@@ -191,79 +191,6 @@ enum Source {
     Keyboard,
 }
 
-/// One microphone kept open (for the pre-roll) for a trigger source. Reopened when its setting
-/// changes, retried every few seconds if it can't be opened.
-struct MicSlot {
-    label: &'static str,
-    wanted: String,
-    recorder: Option<audio::Recorder>,
-    last_attempt: Option<Instant>,
-    last_error: String,
-    /// The wanted mic wasn't found and another one is in use; keep looking for the wanted one.
-    fallback: bool,
-}
-
-impl MicSlot {
-    fn new(label: &'static str) -> Self {
-        Self { label, wanted: String::new(), recorder: None, last_attempt: None, last_error: String::new(), fallback: false }
-    }
-
-    fn close(&mut self) {
-        self.recorder = None;
-        self.fallback = false;
-        self.last_attempt = None;
-        self.last_error.clear();
-    }
-
-    fn set_wanted(&mut self, name: &str) {
-        if self.wanted != name {
-            self.wanted = name.to_string();
-            self.close();
-        }
-    }
-
-    /// Opens the mic if it isn't open yet (at most every 5 s), reporting a new problem only once.
-    fn ensure(&mut self, app: &AppHandle) {
-        if !self.last_attempt.is_none_or(|t| t.elapsed() > Duration::from_secs(5)) {
-            return;
-        }
-        if self.recorder.is_some() {
-            // On a fallback mic: switch over as soon as the wanted one shows up (e.g. controller plugged in).
-            if !self.fallback {
-                return;
-            }
-            self.last_attempt = Some(Instant::now());
-            let wanted = self.wanted.trim().to_lowercase();
-            if !audio::input_device_names().iter().any(|n| n.to_lowercase().contains(&wanted)) {
-                return;
-            }
-            self.recorder = None;
-        }
-        self.last_attempt = Some(Instant::now());
-        match audio::Recorder::start(&self.wanted) {
-            Ok(r) => {
-                let wanted = self.wanted.trim().to_lowercase();
-                self.fallback = !wanted.is_empty() && !r.device_name.to_lowercase().contains(&wanted);
-                let message = if self.fallback {
-                    format!("{}: “{}” not found — using {} for now", self.label, self.wanted, r.device_name)
-                } else {
-                    format!("{}: {}", self.label, r.device_name)
-                };
-                emit(app, "idle", "", &message);
-                self.recorder = Some(r);
-                self.last_error.clear();
-            }
-            Err(e) => {
-                let e = format!("{}: {e}", self.label);
-                if e != self.last_error {
-                    emit(app, "error", "", &e);
-                    self.last_error = e;
-                }
-            }
-        }
-    }
-}
-
 /// Starts the controller reader and the orchestrator loop.
 pub fn start(app: AppHandle, macro_state: AppState, voice: VoiceHandle) {
     let enabled = Arc::new(AtomicBool::new(false));
@@ -279,9 +206,11 @@ pub fn start(app: AppHandle, macro_state: AppState, voice: VoiceHandle) {
     tauri::async_runtime::spawn(async move {
         let epoch = Instant::now();
         let mut gesture = Gesture::default();
-        let mut controller_mic = MicSlot::new("Controller mic");
-        let mut keyboard_mic = MicSlot::new("Keyboard mic");
-        let mut ptt_on = false;
+        // Mic name settings per trigger; the mic is only opened while a take records.
+        let mut controller_mic = String::new();
+        let mut keyboard_mic = String::new();
+        let mut recorder: Option<audio::Recorder> = None;
+        let mut mic_live = false;
         let mut source = Source::Controller;
         // Character counts of the takes typed so far, newest last; each double-tap undoes one.
         let mut takes: Vec<usize> = Vec::new();
@@ -292,15 +221,12 @@ pub fn start(app: AppHandle, macro_state: AppState, voice: VoiceHandle) {
             let event = tokio::select! {
                 _ = tick.tick() => Some((Input::Tick, None)),
                 Some(event) = pad_rx.recv() => match event {
-                    PadEvent::MicDown => Some((Input::Down, Some(Source::Controller))),
-                    PadEvent::MicUp => Some((Input::Up, Some(Source::Controller))),
-                    PadEvent::Connected(connected) => {
+                    PadEvent::TalkDown => Some((Input::Down, Some(Source::Controller))),
+                    PadEvent::TalkUp => Some((Input::Up, Some(Source::Controller))),
+                    PadEvent::Connected { connected, bluetooth } => {
                         if connected {
-                            // The controller's mic shows up as an audio device a moment after the HID
-                            // device; reopen it ~2 s from now to pick it up.
-                            controller_mic.close();
-                            controller_mic.last_attempt = Instant::now().checked_sub(Duration::from_secs(3));
-                            emit(&app, "idle", "", "Controller connected");
+                            let link = if bluetooth { "Bluetooth" } else { "USB" };
+                            emit(&app, "idle", "", &format!("Controller connected ({link}) — tap PS to talk"));
                         } else {
                             emit(&app, "error", "", "Controller disconnected");
                         }
@@ -316,7 +242,7 @@ pub fn start(app: AppHandle, macro_state: AppState, voice: VoiceHandle) {
                         gesture.transcribe_done();
                         match result {
                             Ok((text, _)) if text.is_empty() => {
-                                emit(&app, "info", "", "Didn't catch that — hold the button and try again");
+                                emit(&app, "info", "", "Didn't catch that — try again");
                             }
                             Ok((text, secs)) if crate::hook::is_genshin_active() => {
                                 // Typed at the end with a trailing space, so the next take continues the
@@ -327,7 +253,7 @@ pub fn start(app: AppHandle, macro_state: AppState, voice: VoiceHandle) {
                                     takes.remove(0);
                                 }
                                 let _ = injector.send(InjectOp::Append(typed));
-                                let message = format!("{secs:.1}s · Hold to add more · double-tap to undo");
+                                let message = format!("{secs:.1}s · Talk again to add more · double-tap to undo");
                                 emit(&app, "typed", &text, &message);
                             }
                             Ok((text, secs)) => {
@@ -346,8 +272,7 @@ pub fn start(app: AppHandle, macro_state: AppState, voice: VoiceHandle) {
                 gesture.reset();
                 takes.clear();
                 set_overlay_visible(&app, want);
-                controller_mic.close();
-                keyboard_mic.close();
+                recorder = None;
                 if want {
                     voice.reload.store(true, Ordering::Relaxed); // apply mic + key settings below
                     let s = voice.settings();
@@ -360,7 +285,7 @@ pub fn start(app: AppHandle, macro_state: AppState, voice: VoiceHandle) {
                             match voice.ensure_server(&s).await {
                                 Ok(_) => match voice.gpu_warning(&s) {
                                     Some(warning) => emit(&app, "error", "", &warning),
-                                    None => emit(&app, "idle", "", "Speech engine ready — hold the button to talk"),
+                                    None => emit(&app, "idle", "", "Speech engine ready"),
                                 },
                                 Err(e) => emit(&app, "error", "", &e),
                             }
@@ -380,18 +305,15 @@ pub fn start(app: AppHandle, macro_state: AppState, voice: VoiceHandle) {
 
             if voice.reload.swap(false, Ordering::Relaxed) {
                 let s = voice.settings();
-                controller_mic.set_wanted(&s.mic_name);
-                keyboard_mic.set_wanted(&s.keyboard_mic_name);
-                ptt_on = ptt::code_for(&s.ptt_key) != 0;
+                controller_mic = s.mic_name.clone();
+                keyboard_mic = s.keyboard_mic_name.clone();
                 ptt::configure(&s.ptt_key, true);
-                if !ptt_on {
-                    keyboard_mic.close();
-                }
             }
-            if gesture.state == State::Idle {
-                controller_mic.ensure(&app);
-                if ptt_on {
-                    keyboard_mic.ensure(&app);
+            // Bluetooth headsets take a moment to switch to their mic; say "Listening" once it's live.
+            if !mic_live && matches!(gesture.state, State::Recording { .. } | State::Toggled { .. }) {
+                if recorder.as_ref().is_some_and(|r| r.is_live()) {
+                    mic_live = true;
+                    emit(&app, "listening", "", "Listening…");
                 }
             }
 
@@ -401,13 +323,15 @@ pub fn start(app: AppHandle, macro_state: AppState, voice: VoiceHandle) {
                 // are ignored.
                 if input == Input::Down && matches!(gesture.state, State::Idle | State::Tapped { .. }) {
                     source = from;
+                    // Holding the controller's PS button is a system shortcut, so it's tap-to-talk.
+                    gesture.tap_mode = from == Source::Controller;
                 } else if from != source {
                     continue;
                 }
             }
-            let mic = match source {
-                Source::Controller => &controller_mic,
-                Source::Keyboard => &keyboard_mic,
+            let (mic_label, mic_name) = match source {
+                Source::Controller => ("Controller mic", &controller_mic),
+                Source::Keyboard => ("Keyboard mic", &keyboard_mic),
             };
             let now = epoch.elapsed().as_millis() as u64;
             for action in gesture.step(input, now) {
@@ -417,24 +341,34 @@ pub fn start(app: AppHandle, macro_state: AppState, voice: VoiceHandle) {
                             // The press may have muted the controller mic; switch it back on.
                             unmute.store(true, Ordering::Relaxed);
                         }
-                        if let Some(r) = &mic.recorder {
-                            r.begin();
-                        }
-                        emit(&app, "listening", "", "Listening… release to finish");
+                        recorder = Some(audio::Recorder::start(mic_name));
+                        mic_live = false;
+                        emit(&app, "loading", "", "Starting mic…");
                     }
                     Action::CancelRecording => {
-                        if let Some(r) = &mic.recorder {
-                            r.end();
-                        }
+                        recorder = None;
                         emit(&app, "idle", "", "");
                     }
                     Action::StopAndTranscribe => {
-                        emit(&app, "transcribing", "", "Transcribing…");
-                        let Some(r) = &mic.recorder else {
-                            let _ = done_tx.send(Err(format!("{} not available", mic.label)));
-                            continue;
+                        let take = match recorder.take().map(audio::Recorder::finish) {
+                            Some(Ok(take)) => take,
+                            Some(Err(e)) => {
+                                let _ = done_tx.send(Err(format!("{mic_label}: {e}")));
+                                continue;
+                            }
+                            None => {
+                                let _ = done_tx.send(Err(format!("{mic_label} not available")));
+                                continue;
+                            }
                         };
-                        let (samples, rate) = r.end();
+                        let wanted = mic_name.trim().to_lowercase();
+                        let message = if !wanted.is_empty() && !take.device_name.to_lowercase().contains(&wanted) {
+                            format!("Transcribing… (“{}” not found — used {})", mic_name.trim(), take.device_name)
+                        } else {
+                            "Transcribing…".to_string()
+                        };
+                        emit(&app, "transcribing", "", &message);
+                        let (samples, rate) = (take.samples, take.rate);
                         let voice = voice.clone();
                         let done_tx = done_tx.clone();
                         tauri::async_runtime::spawn(async move {

@@ -35,7 +35,7 @@ pub struct CloudConfig {
 pub struct VoiceSettings {
     /// "local" (whisper-server) or a cloud provider id from `PROVIDERS`.
     pub engine: String,
-    /// Mic used with the controller's mic button: substring of the device name; empty = Windows default.
+    /// Mic used with the controller's PS button: substring of the device name; empty = Windows default.
     pub mic_name: String,
     /// Mic used with the keyboard/mouse push-to-talk key; empty = Windows default.
     pub keyboard_mic_name: String,
