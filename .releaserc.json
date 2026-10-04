@@ -8,7 +8,7 @@
     [
       "@semantic-release/exec",
       {
-        "prepareCmd": "node scripts/set-version.mjs ${nextRelease.version} && npm --prefix tauri-gui run tauri build"
+        "prepareCmd": "node scripts/set-version.mjs ${nextRelease.version} && node scripts/clean-bundles.mjs && npm --prefix tauri-gui run tauri build"
       }
     ],
     [
