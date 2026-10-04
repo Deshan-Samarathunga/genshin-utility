@@ -1,48 +1,49 @@
-//! Microphone capture with a short pre-roll, plus helpers to turn it into 16 kHz mono WAV for Whisper.
+//! Microphone capture, plus helpers to turn it into 16 kHz mono WAV for Whisper.
+//!
+//! The mic is only open while a take is being recorded. Keeping it open would hold Bluetooth
+//! headsets in their low-quality hands-free mode (game audio too) the whole time.
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{FromSample, Sample, SampleFormat, SizedSample};
-use std::collections::VecDeque;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
 pub const WHISPER_RATE: u32 = 16_000;
-const PREROLL_MS: usize = 300;
 const MAX_SECONDS: usize = 35;
 
+#[derive(Default)]
 struct Shared {
+    /// 0 until the stream is open.
     rate: usize,
-    preroll: VecDeque<f32>,
-    recording: bool,
     buf: Vec<f32>,
+    device_name: String,
+    error: Option<String>,
 }
 
 impl Shared {
     fn push(&mut self, mono: impl Iterator<Item = f32>) {
-        let preroll_cap = self.rate * PREROLL_MS / 1000;
         let max = self.rate * MAX_SECONDS;
         for s in mono {
-            if self.recording {
-                if self.buf.len() < max {
-                    self.buf.push(s);
-                }
-            } else {
-                if self.preroll.len() >= preroll_cap {
-                    self.preroll.pop_front();
-                }
-                self.preroll.push_back(s);
+            if self.buf.len() < max {
+                self.buf.push(s);
             }
         }
     }
 }
 
-/// Keeps an input stream open on its own thread for as long as it lives.
+/// One take: the mic is opened on a background thread when this is created and closed when it's
+/// finished or dropped.
 pub struct Recorder {
     shared: Arc<Mutex<Shared>>,
     stop: Arc<AtomicBool>,
+}
+
+/// What a finished take recorded.
+pub struct Take {
+    pub samples: Vec<f32>,
+    pub rate: u32,
     pub device_name: String,
 }
 
@@ -97,78 +98,64 @@ where
     )
 }
 
+fn open_and_run(name_contains: &str, shared: &Arc<Mutex<Shared>>, stop: &AtomicBool) -> Result<(), String> {
+    let device = pick_device(name_contains).ok_or("No microphone found")?;
+    let device_name = device
+        .description()
+        .map(|n| n.name().to_string())
+        .unwrap_or_else(|_| "Unknown mic".into());
+    let supported = device.default_input_config().map_err(|e| e.to_string())?;
+    let config = supported.config();
+    {
+        let mut s = shared.lock().unwrap();
+        s.rate = config.sample_rate as usize;
+        s.device_name = device_name;
+    }
+    let stream = match supported.sample_format() {
+        SampleFormat::F32 => build_stream::<f32>(&device, &config, shared.clone()),
+        SampleFormat::I16 => build_stream::<i16>(&device, &config, shared.clone()),
+        SampleFormat::U16 => build_stream::<u16>(&device, &config, shared.clone()),
+        SampleFormat::I32 => build_stream::<i32>(&device, &config, shared.clone()),
+        other => return Err(format!("Unsupported sample format {other:?}")),
+    }
+    .map_err(|e| e.to_string())?;
+    stream.play().map_err(|e| e.to_string())?;
+    while !stop.load(Ordering::Relaxed) {
+        thread::sleep(Duration::from_millis(10));
+    }
+    Ok(())
+}
+
 impl Recorder {
-    pub fn start(name_contains: &str) -> Result<Recorder, String> {
-        let device = pick_device(name_contains).ok_or("No microphone found")?;
-        let device_name = device
-            .description()
-            .map(|n| n.name().to_string())
-            .unwrap_or_else(|_| "Unknown mic".into());
-        let supported = device.default_input_config().map_err(|e| e.to_string())?;
-        let format = supported.sample_format();
-        let config = supported.config();
-
-        let shared = Arc::new(Mutex::new(Shared {
-            rate: config.sample_rate as usize,
-            preroll: VecDeque::new(),
-            recording: false,
-            buf: Vec::new(),
-        }));
+    /// Opens the mic whose name contains `name_contains` (or the Windows default) and starts
+    /// recording as soon as audio arrives. Returns at once; errors show up in `finish`.
+    pub fn start(name_contains: &str) -> Recorder {
+        let shared = Arc::new(Mutex::new(Shared::default()));
         let stop = Arc::new(AtomicBool::new(false));
-
+        let name = name_contains.to_string();
+        let (thread_shared, thread_stop) = (shared.clone(), stop.clone());
         // cpal streams aren't Send on every backend, so the stream lives and dies on this thread.
-        let (ready_tx, ready_rx) = mpsc::channel::<Result<(), String>>();
-        {
-            let shared = shared.clone();
-            let stop = stop.clone();
-            thread::spawn(move || {
-                let stream = match format {
-                    SampleFormat::F32 => build_stream::<f32>(&device, &config, shared),
-                    SampleFormat::I16 => build_stream::<i16>(&device, &config, shared),
-                    SampleFormat::U16 => build_stream::<u16>(&device, &config, shared),
-                    SampleFormat::I32 => build_stream::<i32>(&device, &config, shared),
-                    other => {
-                        let _ = ready_tx.send(Err(format!("Unsupported sample format {other:?}")));
-                        return;
-                    }
-                };
-                let stream = match stream.map_err(|e| e.to_string()).and_then(|s| {
-                    s.play().map_err(|e| e.to_string())?;
-                    Ok(s)
-                }) {
-                    Ok(s) => s,
-                    Err(e) => {
-                        let _ = ready_tx.send(Err(e));
-                        return;
-                    }
-                };
-                let _ = ready_tx.send(Ok(()));
-                while !stop.load(Ordering::Relaxed) {
-                    thread::sleep(Duration::from_millis(100));
-                }
-                drop(stream);
-            });
+        thread::spawn(move || {
+            if let Err(e) = open_and_run(&name, &thread_shared, &thread_stop) {
+                thread_shared.lock().unwrap().error = Some(e);
+            }
+        });
+        Recorder { shared, stop }
+    }
+
+    /// True once the mic is delivering audio (Bluetooth headsets take a moment to switch modes).
+    pub fn is_live(&self) -> bool {
+        !self.shared.lock().unwrap().buf.is_empty()
+    }
+
+    /// Closes the mic and returns what it recorded.
+    pub fn finish(self) -> Result<Take, String> {
+        self.stop.store(true, Ordering::Relaxed);
+        let mut s = self.shared.lock().unwrap();
+        if let Some(e) = s.error.take() {
+            return Err(e);
         }
-
-        ready_rx
-            .recv_timeout(Duration::from_secs(5))
-            .map_err(|_| "Timed out opening microphone".to_string())??;
-
-        Ok(Recorder { shared, stop, device_name })
-    }
-
-    pub fn begin(&self) {
-        let mut s = self.shared.lock().unwrap();
-        let preroll: Vec<f32> = s.preroll.drain(..).collect();
-        s.buf = preroll;
-        s.recording = true;
-    }
-
-    /// Stops recording and returns (mono samples, sample rate).
-    pub fn end(&self) -> (Vec<f32>, u32) {
-        let mut s = self.shared.lock().unwrap();
-        s.recording = false;
-        (std::mem::take(&mut s.buf), s.rate as u32)
+        Ok(Take { samples: std::mem::take(&mut s.buf), rate: s.rate as u32, device_name: s.device_name.clone() })
     }
 }
 
