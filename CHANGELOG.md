@@ -1,3 +1,13 @@
+## [1.1.0](https://github.com/[secure]/genshin-utility/compare/v1.0.0...v1.1.0) (2026-10-04)
+
+### Features
+
+* easier voice chat corrections, names and multi-sentence typing ([bc51a08](https://github.com/[secure]/genshin-utility/commit/bc51a080bc7ec492f310b4e2dbf457946e950fcb))
+
+### Bug Fixes
+
+* open the app when Genshin starts, even if it isn't running ([7b14e4f](https://github.com/[secure]/genshin-utility/commit/7b14e4fcf4718eac09fea7b8df9d78df33f88f48))
+
 ## 1.0.0 (2026-10-03)
 
 ### Features
