@@ -44,24 +44,30 @@ npm run tauri build
 
 The compiled installer will be located in `src-tauri/target/release/bundle/`.
 
-## Voice Chat (PS5)
+Builds are signed for the in-app updater, so `tauri build` needs the private key: set `TAURI_SIGNING_PRIVATE_KEY` (key contents) or use `node scripts/build-release.mjs <version>` from the repo root, which reads `~/.tauri/genshin-utility.key`.
 
-Type to friends in Genshin's chat from the couch using the DualSense's built-in microphone.
+## Voice Chat (PS5 controller or keyboard & mouse)
 
-1. Connect the DualSense **by USB** (Windows only exposes the controller mic over USB) and use Genshin's native controller support (not Steam Input / DS4Windows).
-2. In the **Voice Chat (PS5)** card, open *Settings* and pick an engine:
-   - **Local Whisper (offline):** click *Download engine* (whisper.cpp `whisper-server`, CPU or CUDA build) and *Download model*. `small.en q5` is a good CPU default; with *Use NVIDIA GPU* on, `large-v3-turbo q5` is the most accurate.
-   - **Cloud Whisper:** any OpenAI-compatible endpoint, e.g. Groq (`https://api.groq.com/openai/v1`, model `whisper-large-v3`) with your API key.
+Type to friends in Genshin's chat by voice: from the couch with a DualSense, or at the desk with a
+headset and a push-to-talk key.
+
+1. **Controller:** connect the DualSense **by USB** (Windows only exposes the controller mic over USB) and use Genshin's native controller support (not Steam Input / DS4Windows).
+   **Keyboard & mouse:** pick your push-to-talk key in *Settings* (Mouse 4 by default; Mouse 5 or F9–F12 also work).
+2. In the **Voice Chat** card, open *Settings*:
+   - **Controller mic** is used with the controller's mic button (default: the DualSense mic). **Keyboard & mouse mic** is used with the push-to-talk key — pick your headset there. Either can be any microphone.
+   - Pick an engine: **Local Whisper (offline)** — click *Download engine* and *Download model* (`small.en q5` for CPU, `large-v3-turbo q5` with *Use NVIDIA GPU*) — or a **cloud** provider (Groq, Gemini, Deepgram, ElevenLabs, Mistral, OpenAI, custom) with its API key in the keys table.
 3. Add friends' names and game terms to *Names & words* so they're spelled right, and use *Auto-corrections* for anything it keeps mishearing.
-4. Turn the card on. In-game, open a friend's chat (1080p layout), then on the controller:
+4. Turn the card on. In-game, open a friend's chat (1080p layout), then use the controller's **mic button** or your **push-to-talk key**:
 
-| Gesture on the **mic button** | Action |
+| Gesture | Action |
 |---|---|
-| Hold, speak, release | Transcribes and types the text into the chat box (send it with the game's own controls) |
-| Double-tap | Undo the last typed sentence (repeat to undo earlier ones) |
+| Hold, speak, release | Transcribes and types the text at the end of the chat box (send it with the game's own controls) |
 | Hold again | Speak another sentence; it's added after whatever is already in the chat box |
+| Double-tap | Undo the last typed sentence (repeat to undo earlier ones) |
 
-A small overlay at the top of the screen shows listening / transcribing / the transcript. Downloads are stored in the app data folder (`whisper/`), settings in `voice.json` in the app config folder.
+The push-to-talk key only acts while Genshin is in front and is hidden from the game. A small overlay at
+the top of the screen shows listening / transcribing / the transcript. Downloads are stored in the app
+data folder (`whisper/`), settings in `voice.json` in the app config folder.
 
 ## Commits & releases
 
@@ -80,3 +86,10 @@ Releases are automatic: on every push to `main`, [semantic-release](https://sema
 | `chore:`, `docs:`, `ci:`, `refactor:` … | no release |
 
 When a release is due it updates the version in `package.json`, `tauri.conf.json` and `Cargo.toml`, writes `CHANGELOG.md`, builds the Windows installers and publishes them on the GitHub Releases page.
+
+### In-app updates
+
+Settings → About checks the latest release's `latest.json` and installs the new version from inside the app (it also checks quietly at startup and puts a dot on the Settings tab). Installers are signed with the updater key; the app only installs files whose signature matches the public key in `tauri.conf.json`.
+
+- Local key: `~/.tauri/genshin-utility.key`. **Back it up and never commit it** — if it's lost, installed copies can't update to new versions and everyone has to reinstall manually.
+- CI: add the key file's contents as the repository secret `TAURI_SIGNING_PRIVATE_KEY`.

@@ -17,7 +17,10 @@
         <div class="status-pill" id="status-pill" role="status" aria-live="polite"><span id="status-bar">Ready</span></div>
         <div class="brand">
           <img class="brand-logo" src="assets/logo.png" alt="Genshin Utility logo" />
-          <h1>GENSHIN UTILITY</h1>
+          <div class="brand-text">
+            <h1>GENSHIN UTILITY</h1>
+            <span class="credit">by frost_bane</span>
+          </div>
         </div>
       </header>
 
@@ -39,24 +42,17 @@
             <svg class="tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/><path class="ico-wave ico-wave-l" d="M3 6.5a5 5 0 0 0 0 5"/><path class="ico-wave ico-wave-r" d="M21 6.5a5 5 0 0 1 0 5"/></svg>
             <span>Voice Chat</span><i class="tab-dot" data-for="voice_chat"></i>
           </button>
-
-          <div class="sidebar-backup" title="Back up every setting, including API keys, to one file you can import after a fresh install.">
-            <button type="button" id="settings-export">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
-              Export
-            </button>
-            <button type="button" id="settings-import">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 21h14"/></svg>
-              Import
-            </button>
+          <div class="sub-tabs" id="voice-subtabs" hidden>
+            <button type="button" class="sub-tab-btn" data-voice-section="controls">Controls &amp; mics</button>
+            <button type="button" class="sub-tab-btn" data-voice-section="engine">Speech engine</button>
+            <button type="button" class="sub-tab-btn" data-voice-section="keys">API keys</button>
+            <button type="button" class="sub-tab-btn" data-voice-section="words">Words</button>
           </div>
-          <label class="sidebar-option" title="Windows opens this app whenever Genshin starts, even if the app is closed. Nothing runs in the background.">
-            <span>Open with Genshin</span>
-            <span class="switch switch-sm">
-              <input type="checkbox" id="toggle-auto-open">
-              <span class="slider"></span>
-            </span>
-          </label>
+
+          <button type="button" class="tab-btn tab-settings" role="tab" data-tab="settings">
+            <svg class="tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g class="ico-cog"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></g></svg>
+            <span>Settings</span>
+          </button>
         </nav>
 
       <main class="scripts-list">
@@ -101,7 +97,6 @@
               <input type="text" id="auto-message-text" placeholder="Message text..." />
               <input type="number" id="auto-message-count" placeholder="Loops" min="1" value="1" />
             </div>
-            <p class="hotkey-hint" style="margin-top: 8px; font-size: 0.85em; opacity: 0.8;"><em>Tip: Enter a multiple of 7 (e.g. 7, 14, 21) to match full-page scrolling!</em></p>
           </div>
           <label class="switch">
             <input type="checkbox" id="toggle-message" data-script="auto_message">
@@ -111,103 +106,163 @@
         <!-- Script 5 -->
         <div data-tab="voice" role="tabpanel" class="script-card tab-panel voice-card">
           <div class="script-info">
-            <h2>Voice Chat (PS5)</h2>
-            <p>Talk into the DualSense mic and it types into the open chat box</p>
-            <p class="hotkey-hint"><strong>Controller:</strong> Hold <kbd>Mic</kbd> to speak — it's typed at the end of the chat box, so hold again to add more · double-tap to undo sentences one by one. Send with the game's controls.</p>
-            <p class="voice-last" id="voice-last">Open a friend's chat in-game, then hold the mic button.</p>
+            <h2>Voice Chat</h2>
+            <p>Speak and it types into the chat box</p>
+            <p class="hotkey-hint">Hold <kbd>Mic</kbd><span id="voice-ptt-or"> or <kbd id="voice-ptt-hint">Mouse 4</kbd></span> to talk · double-tap to undo.</p>
+            <p class="voice-last" id="voice-last"></p>
 
-            <details class="voice-settings">
-              <summary>Settings</summary>
-              <div class="voice-grid">
-                <label>Engine
-                  <select id="voice-engine">
-                    <optgroup label="Offline">
-                      <option value="local">Local Whisper (on this PC)</option>
-                    </optgroup>
-                    <optgroup label="Cloud (free)">
-                      <option value="groq">Groq Whisper — free tier</option>
-                      <option value="gemini">Google Gemini — free tier</option>
-                      <option value="deepgram">Deepgram Nova-3 — $200 free credit</option>
-                      <option value="elevenlabs">ElevenLabs Scribe — free monthly credits</option>
-                      <option value="mistral">Mistral Voxtral — free Experiment plan</option>
-                    </optgroup>
-                    <optgroup label="Cloud (paid)">
-                      <option value="openai">OpenAI</option>
-                      <option value="custom">Custom (OpenAI-compatible)</option>
-                    </optgroup>
-                  </select>
-                </label>
-                <label>Microphone
-                  <select id="voice-mic"></select>
-                </label>
-                <label>Language
-                  <select id="voice-language">
-                    <option value="en">English</option>
-                    <option value="auto">Auto-detect</option>
-                  </select>
-                </label>
-
-                <div class="voice-local">
-                  <label>Model
-                    <select id="voice-model"></select>
-                  </label>
-                  <label class="voice-check"><input type="checkbox" id="voice-gpu" /> Use NVIDIA GPU (CUDA)</label>
-                  <div class="voice-actions">
-                    <button type="button" id="voice-dl-engine">Download engine</button>
-                    <button type="button" id="voice-dl-model">Download model</button>
-                  </div>
-                  <p class="voice-note" id="voice-engine-status"></p>
-                </div>
-
-                <div class="voice-cloud">
-                  <p class="voice-note" id="voice-provider-hint"></p>
-                </div>
-
-                <div class="voice-keys">
-                  <span class="voice-subhead">API keys &amp; endpoints</span>
-                  <div class="voice-table-wrap">
-                    <table class="voice-table">
-                      <thead>
-                        <tr><th>Provider</th><th>API key</th><th>Model / Base URL</th><th></th></tr>
-                      </thead>
-                      <tbody id="voice-provider-rows"></tbody>
-                    </table>
-                  </div>
-                  <p class="voice-note">The highlighted row is the engine in use. Keys are stored on this PC only (voice.json in the app config folder).</p>
-                </div>
-
-                <div class="voice-vocab">
-                  <span>Names &amp; words to spell correctly</span>
-                  <div class="vocab-box" id="voice-vocab-box">
-                    <div class="vocab-chips" id="voice-vocab-chips"></div>
-                    <input type="text" id="voice-vocab-input" placeholder="Type a name and press Enter" spellcheck="false" autocomplete="off" />
-                  </div>
-                  <p class="voice-note"><span id="voice-vocab-count"></span> Add your friends' names here. Newest names are kept first if the list gets long.</p>
-                </div>
-                <div class="voice-corrections">
-                  <span>Auto-corrections</span>
-                  <div class="voice-table-wrap">
-                    <table class="voice-table voice-corrections-table">
-                      <thead>
-                        <tr><th>Heard</th><th></th><th>Wanted</th><th></th></tr>
-                      </thead>
-                      <tbody id="voice-correction-rows"></tbody>
-                    </table>
-                  </div>
-                  <p class="voice-note">Type a word or phrase it mishears and what it should become. Capitals don't matter.</p>
-                </div>
-              </div>
-            </details>
           </div>
           <label class="switch">
             <input type="checkbox" id="toggle-voice" data-script="voice_chat">
             <span class="slider"></span>
           </label>
         </div>
+        <section class="script-card voice-section" data-voice-section="controls" hidden>
+          <div class="voice-grid">
+            <h3 class="voice-section-title">Controls &amp; mics</h3>
+            <label>Push-to-talk key (keyboard &amp; mouse)
+              <select id="voice-ptt-key">
+                <option value="mouse4">Mouse 4 (back side button)</option>
+                <option value="mouse5">Mouse 5 (forward side button)</option>
+                <option value="f9">F9</option>
+                <option value="f10">F10</option>
+                <option value="f11">F11</option>
+                <option value="f12">F12</option>
+                <option value="off">Off (controller only)</option>
+              </select>
+            </label>
+            <label>Controller mic <span class="voice-sub">used with the controller's mic button</span>
+              <select id="voice-mic" class="voice-mic-select"></select>
+            </label>
+            <label>Keyboard &amp; mouse mic <span class="voice-sub">used with the push-to-talk key — pick your headset</span>
+              <select id="voice-mic-keys" class="voice-mic-select"></select>
+            </label>
+            <label>Language
+              <select id="voice-language">
+                <option value="en">English</option>
+                <option value="auto">Auto-detect</option>
+              </select>
+            </label>
+          </div>
+        </section>
+        <section class="script-card voice-section" data-voice-section="engine" hidden>
+          <div class="voice-grid">
+            <h3 class="voice-section-title">Speech engine</h3>
+            <label>Engine
+              <select id="voice-engine">
+                <optgroup label="Offline">
+                  <option value="local">Local Whisper (on this PC)</option>
+                </optgroup>
+                <optgroup label="Cloud (free)">
+                  <option value="groq">Groq Whisper — free tier</option>
+                  <option value="gemini">Google Gemini — free tier</option>
+                  <option value="deepgram">Deepgram Nova-3 — $200 free credit</option>
+                  <option value="elevenlabs">ElevenLabs Scribe — free monthly credits</option>
+                  <option value="mistral">Mistral Voxtral — free Experiment plan</option>
+                </optgroup>
+                <optgroup label="Cloud (paid)">
+                  <option value="openai">OpenAI</option>
+                  <option value="custom">Custom (OpenAI-compatible)</option>
+                </optgroup>
+              </select>
+            </label>
+            <div class="voice-local">
+              <label>Model
+                <select id="voice-model"></select>
+              </label>
+              <label class="voice-check"><input type="checkbox" id="voice-gpu" /> Use NVIDIA GPU (CUDA)</label>
+              <div class="voice-actions">
+                <button type="button" id="voice-dl-engine">Download engine</button>
+                <button type="button" id="voice-dl-model">Download model</button>
+              </div>
+              <p class="voice-note" id="voice-engine-status"></p>
+            </div>
+            <div class="voice-cloud">
+              <p class="voice-note" id="voice-provider-hint"></p>
+            </div>
+          </div>
+        </section>
+        <section class="script-card voice-section" data-voice-section="keys" hidden>
+          <div class="voice-grid">
+            <h3 class="voice-section-title">API keys</h3>
+            <div class="voice-keys">
+              <span class="voice-subhead">API keys &amp; endpoints</span>
+              <div class="voice-table-wrap">
+                <table class="voice-table">
+                  <thead>
+                    <tr><th>Provider</th><th>API key</th><th>Model / Base URL</th><th></th></tr>
+                  </thead>
+                  <tbody id="voice-provider-rows"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section class="script-card voice-section" data-voice-section="words" hidden>
+          <div class="voice-grid">
+            <h3 class="voice-section-title">Words</h3>
+            <div class="voice-vocab">
+              <span>Names &amp; words to spell correctly</span>
+              <div class="vocab-box" id="voice-vocab-box">
+                <div class="vocab-chips" id="voice-vocab-chips"></div>
+                <input type="text" id="voice-vocab-input" placeholder="Type a name and press Enter" spellcheck="false" autocomplete="off" />
+              </div>
+              <p class="voice-note" id="voice-vocab-count"></p>
+            </div>
+            <div class="voice-corrections">
+              <span>Auto-corrections</span>
+              <div class="voice-table-wrap">
+                <table class="voice-table voice-corrections-table">
+                  <thead>
+                    <tr><th>Heard</th><th></th><th>Wanted</th><th></th></tr>
+                  </thead>
+                  <tbody id="voice-correction-rows"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Settings -->
+        <section data-tab="settings" role="tabpanel" class="script-card tab-panel settings-panel">
+          <h2 class="settings-title">Settings</h2>
+
+          <h3 class="settings-group">General</h3>
+          <div class="settings-row">
+            <div>
+              <div class="settings-label">Open with Genshin</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="toggle-auto-open">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <h3 class="settings-group">Backup</h3>
+          <div class="settings-row">
+            <div>
+              <div class="settings-label">Settings file</div>
+            </div>
+            <div class="settings-actions">
+              <button type="button" class="btn" id="settings-export">Export</button>
+              <button type="button" class="btn" id="settings-import">Import</button>
+            </div>
+          </div>
+
+          <h3 class="settings-group">About</h3>
+          <div class="settings-row">
+            <div>
+              <div class="settings-label">Genshin Impact Utility <span id="app-version"></span></div>
+              <div class="settings-desc" id="update-desc"></div>
+              <div class="update-progress" id="update-progress" hidden><div></div></div>
+            </div>
+            <div class="settings-actions">
+              <button type="button" class="btn" id="check-updates">Check for updates</button>
+            </div>
+          </div>
+        </section>
       </main>
       </div>
-
-      <div class="credit">by frost_bane</div>
     </div>
   </body>
 </html>

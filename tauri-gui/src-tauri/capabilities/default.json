@@ -5,7 +5,6 @@
   "windows": ["main", "overlay"],
   "permissions": [
     "core:default",
-    "core:webview:allow-set-webview-zoom",
     "opener:default"
   ]
 }

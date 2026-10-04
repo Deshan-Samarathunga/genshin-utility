@@ -281,20 +281,6 @@ input:active + .slider {
   color: #f87171 !important;
 }
 
-.voice-settings {
-  margin-top: var(--spacing-xs);
-  font-size: 13px;
-  color: var(--body);
-}
-
-.voice-settings summary {
-  cursor: pointer;
-  color: var(--ink);
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  font-size: 11px;
-}
-
 .voice-grid,
 .voice-local,
 .voice-cloud {
@@ -729,20 +715,6 @@ input:active + .slider {
   background: transparent;
 }
 
-/* "Open with Genshin" toggle pinned to the bottom of the sidebar */
-.sidebar-option {
-  margin-top: auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 12px;
-  border-top: 1px solid var(--hairline);
-  color: var(--body);
-  font-size: 12px;
-  cursor: pointer;
-}
-
 .switch.switch-sm {
   width: 40px;
   height: 20px;
@@ -858,47 +830,6 @@ input:active + .slider {
   }
 }
 
-/* Settings export/import, above the "Open with Genshin" toggle */
-.sidebar-backup {
-  margin-top: auto;
-  display: flex;
-  gap: 6px;
-  padding: 12px 12px 0;
-  border-top: 1px solid var(--hairline);
-}
-
-.sidebar-backup + .sidebar-option {
-  margin-top: 0;
-  border-top: none;
-}
-
-.sidebar-backup button {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 7px 0;
-  background-color: var(--canvas);
-  border: 1px solid var(--hairline);
-  border-radius: 0px; /* SHARP */
-  color: var(--body);
-  font-family: inherit;
-  font-size: 11px;
-  cursor: pointer;
-  transition: color .15s, border-color .15s;
-}
-
-.sidebar-backup button:hover:not(:disabled) {
-  color: var(--ink);
-  border-color: var(--primary);
-}
-
-.sidebar-backup button:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
 /* Auto-corrections table */
 .voice-corrections {
   display: flex;
@@ -1006,4 +937,366 @@ input:active + .slider {
 
 .vocab-box input:focus {
   outline: none;
+}
+
+.voice-sub {
+  font-size: 11px;
+  opacity: 0.7;
+  margin-left: 4px;
+}
+
+/* Voice Chat sub-tabs (sidebar) and settings sections */
+.sub-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 2px 0 6px 22px;
+  padding-left: 10px;
+  border-left: 1px solid var(--hairline);
+}
+
+.sub-tab-btn {
+  background: transparent;
+  border: none;
+  border-left: 2px solid transparent;
+  color: var(--body);
+  font-family: inherit;
+  font-size: 11px;
+  text-align: left;
+  padding: 6px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sub-tab-btn:hover {
+  color: var(--ink);
+}
+
+.sub-tab-btn.active {
+  color: var(--primary);
+  border-left-color: var(--primary);
+  background-color: var(--canvas-elevated);
+}
+
+.voice-section {
+  display: block;
+}
+
+.voice-section[hidden] {
+  display: none !important;
+}
+
+.voice-section .voice-grid {
+  margin-top: 0;
+}
+
+.voice-section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.voice-section .voice-grid {
+  font-size: 13px;
+  color: var(--body);
+}
+
+/* Keep the Voice Chat header card compact so the settings section sits higher. */
+.voice-card .hotkey-hint {
+  margin-top: var(--spacing-xxs) !important;
+}
+
+.voice-card .script-info > p:first-of-type {
+  font-size: 13px;
+}
+
+/* ── Standard desktop density ──────────────────────────────
+   Fixed sizes like other desktop apps (no zoom with window size): 13px body, 12px secondary,
+   15-16px headings, ~32px controls. Orbitron stays for brand, headings and navigation;
+   running text and form controls use the Windows UI font for legibility at small sizes. */
+:root {
+  --ui-font: 'Segoe UI', 'Inter', system-ui, sans-serif;
+}
+
+body {
+  font-size: 13px;
+}
+
+.hero-band-cinema {
+  padding: 12px var(--spacing-sm);
+}
+
+.hero-band-cinema h1 {
+  font-size: 22px;
+  letter-spacing: 0;
+}
+
+.brand {
+  gap: 10px;
+}
+
+.brand-logo {
+  height: 36px;
+}
+
+.status-pill {
+  font-family: var(--ui-font);
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
+.sidebar {
+  width: 210px;
+  padding: 12px 8px;
+}
+
+.tab-btn {
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.sub-tab-btn {
+  padding: 5px 8px;
+}
+
+.scripts-list {
+  padding: var(--spacing-sm);
+  gap: var(--spacing-xs);
+}
+
+/* Keep content at a readable width on large screens. */
+.script-card,
+.voice-section {
+  width: 100%;
+  max-width: 900px;
+  padding: 20px;
+}
+
+.script-info h2 {
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+
+.script-info p,
+.hotkey-hint,
+.voice-last,
+.voice-note,
+.voice-grid,
+.voice-grid label,
+.auto-message-inputs input,
+.speed-control {
+  font-family: var(--ui-font);
+}
+
+.script-info p {
+  font-size: 13px;
+}
+
+.hotkey-hint {
+  font-size: 12px !important;
+  margin-top: 10px !important;
+}
+
+.voice-section-title {
+  font-size: 15px;
+}
+
+.voice-section .voice-grid,
+.voice-grid label {
+  font-size: 13px;
+}
+
+.voice-note {
+  font-size: 12px !important;
+}
+
+.voice-grid select,
+.voice-grid input[type="text"],
+.voice-grid input[type="password"],
+.voice-grid textarea,
+.voice-table input,
+.vocab-box input,
+.auto-message-inputs input {
+  font-family: var(--ui-font);
+  font-size: 13px;
+  min-height: 30px;
+  padding: 4px 8px;
+}
+
+.voice-table {
+  font-family: var(--ui-font);
+  font-size: 12px;
+}
+
+.voice-table th,
+.voice-table td {
+  padding: 4px 6px;
+}
+
+.vocab-chip {
+  font-family: var(--ui-font);
+  font-size: 12px;
+  padding: 2px 3px 2px 8px;
+}
+
+.vocab-box {
+  padding: 6px;
+  gap: 4px;
+}
+
+kbd {
+  font-size: 10px;
+  padding: 2px 6px;
+}
+
+.credit {
+  padding: 4px 0 8px;
+  font-size: 10px;
+}
+
+/* Settings tab (pinned to the bottom of the sidebar) */
+.tab-settings {
+  margin-top: auto;
+}
+
+.tab-btn:hover .ico-cog {
+  transform-origin: center;
+  transform-box: fill-box;
+  animation: ico-spin 0.8s ease-in-out;
+}
+
+@keyframes ico-spin {
+  to { transform: rotate(90deg); }
+}
+
+.settings-panel {
+  display: block;
+}
+
+.settings-title {
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.settings-group {
+  margin: 18px 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--body);
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.settings-label {
+  font-family: var(--ui-font);
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.settings-label span {
+  color: var(--body);
+  font-size: 12px;
+  margin-left: 4px;
+}
+
+.settings-desc {
+  font-family: var(--ui-font);
+  font-size: 12px;
+  color: var(--body);
+  margin-top: 2px;
+}
+
+.settings-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btn {
+  background-color: var(--canvas);
+  border: 1px solid var(--hairline);
+  color: var(--ink);
+  font-family: var(--ui-font);
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 0px; /* SHARP */
+  cursor: pointer;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--primary);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.sub-tabs[hidden] {
+  display: none;
+}
+
+/* In-app update */
+.update-progress {
+  margin-top: 8px;
+  width: 260px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.update-progress > div {
+  width: 0;
+  height: 100%;
+  background: var(--primary);
+  transition: width 0.2s ease;
+}
+
+.tab-settings {
+  position: relative;
+}
+
+.tab-settings.has-update::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 24px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 6px var(--primary);
+}
+
+/* Credit sits under the title in the header */
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.1;
+}
+
+.brand-text .credit {
+  padding: 0;
+  margin-top: 2px;
+  background: none;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-align: left;
+  opacity: 0.6;
+}
+
+.voice-last:empty,
+.settings-desc:empty {
+  display: none;
 }

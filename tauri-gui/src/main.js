@@ -74,41 +74,6 @@ async function handleToggle(event) {
   updateTabDot(scriptName, checkbox.checked);
 }
 
-// ── Scale to window size ─────────────────────────────────────
-
-// The layout is designed at this size; larger or smaller windows zoom the whole page uniformly.
-const DESIGN_WIDTH = 900;
-const DESIGN_HEIGHT = 680;
-const MIN_ZOOM = 0.8;
-const MAX_ZOOM = 1.8;
-
-async function initScaling() {
-  const { window: tauriWindow, webview: tauriWebview } = window.__TAURI__;
-  if (!tauriWindow || !tauriWebview) return;
-  const appWindow = tauriWindow.getCurrentWindow();
-  const webview = tauriWebview.getCurrentWebview();
-  let current = 0;
-
-  // Uses the window's real size (not the page's), so changing the zoom can't feed back into itself.
-  const apply = async () => {
-    const [size, factor] = await Promise.all([appWindow.innerSize(), appWindow.scaleFactor()]);
-    if (!size.width || !size.height) return; // minimized
-    const fit = Math.min(size.width / factor / DESIGN_WIDTH, size.height / factor / DESIGN_HEIGHT);
-    const zoom = Math.round(Math.min(Math.max(fit, MIN_ZOOM), MAX_ZOOM) * 100) / 100;
-    if (zoom !== current) {
-      current = zoom;
-      await webview.setZoom(zoom);
-    }
-  };
-
-  let pending = null;
-  await appWindow.onResized(() => {
-    clearTimeout(pending);
-    pending = setTimeout(() => apply().catch(console.error), 50);
-  });
-  await apply();
-}
-
 // ── Sidebar tabs ─────────────────────────────────────────────
 
 const TAB_KEY = 'genshin-utility.tab';
@@ -123,6 +88,24 @@ function selectTab(tab) {
     panel.hidden = panel.dataset.tab !== tab;
   });
   localStorage.setItem(TAB_KEY, tab);
+  showVoiceSection(tab === 'voice' ? localStorage.getItem(VOICE_SECTION_KEY) || 'controls' : null);
+}
+
+const VOICE_SECTION_KEY = 'genshin-utility.voice-section';
+
+// Voice Chat settings sections, picked from the sub-tabs under "Voice Chat" in the sidebar.
+// `section` null hides them (another tab is open).
+function showVoiceSection(section) {
+  const subtabs = document.getElementById('voice-subtabs');
+  if (!subtabs) return;
+  subtabs.hidden = section === null;
+  document.querySelectorAll('.sub-tab-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.voiceSection === section);
+  });
+  document.querySelectorAll('.voice-section').forEach((panel) => {
+    panel.hidden = panel.dataset.voiceSection !== section;
+  });
+  if (section) localStorage.setItem(VOICE_SECTION_KEY, section);
 }
 
 function updateTabDot(scriptName, on) {
@@ -237,19 +220,96 @@ async function initAutoOpen() {
   });
 }
 
+
+async function initAbout() {
+  const version = document.getElementById('app-version');
+  const button = document.getElementById('check-updates');
+  const desc = document.getElementById('update-desc');
+  const bar = document.getElementById('update-progress');
+  const settingsTab = document.querySelector('.tab-settings');
+  let available = null;
+
+  try {
+    version.textContent = `v${await window.__TAURI__.app.getVersion()}`;
+  } catch {
+    version.textContent = '';
+  }
+
+  const showAvailable = (update) => {
+    available = update;
+    settingsTab.classList.toggle('has-update', !!update);
+    if (update) {
+      desc.textContent = `v${update.version} available`;
+      button.textContent = `Update to v${update.version}`;
+    }
+  };
+
+  const check = async (quiet) => {
+    button.disabled = true;
+    if (!quiet) desc.textContent = 'Checking…';
+    try {
+      const update = await invoke('check_update');
+      showAvailable(update);
+      if (!update && !quiet) desc.textContent = 'Up to date';
+    } catch (error) {
+      if (!quiet) desc.textContent = String(error);
+    } finally {
+      button.disabled = false;
+    }
+  };
+
+  const install = async () => {
+    button.disabled = true;
+    bar.hidden = false;
+    desc.textContent = `Downloading v${available.version}…`;
+    const fill = bar.firstElementChild;
+    const unlisten = await window.__TAURI__.event.listen('update-progress', ({ payload }) => {
+      const mb = (payload.downloaded / 1048576).toFixed(1);
+      if (payload.total) {
+        const pct = Math.min(100, Math.round((payload.downloaded / payload.total) * 100));
+        fill.style.width = `${pct}%`;
+        desc.textContent = `Downloading v${available.version}… ${pct}%`;
+      } else {
+        desc.textContent = `Downloading v${available.version}… ${mb} MB`;
+      }
+    });
+    try {
+      // On success the installer closes the app, so this normally never resolves.
+      await invoke('install_update');
+      desc.textContent = 'Installing…';
+    } catch (error) {
+      desc.textContent = String(error);
+      bar.hidden = true;
+      fill.style.width = '0';
+      showAvailable(null);
+      button.textContent = 'Check for updates';
+      button.disabled = false;
+    } finally {
+      unlisten();
+    }
+  };
+
+  button.addEventListener('click', () => (available ? install() : check(false)));
+  // Quiet check shortly after start: only a dot on the Settings tab if something new is out.
+  setTimeout(() => check(true), 3000);
+}
+
 function initTabs() {
   const buttons = document.querySelectorAll('.tab-btn');
   buttons.forEach((btn) => btn.addEventListener('click', () => selectTab(btn.dataset.tab)));
+  document.querySelectorAll('.sub-tab-btn').forEach((btn) => {
+    btn.addEventListener('click', () => showVoiceSection(btn.dataset.voiceSection));
+  });
   const saved = localStorage.getItem(TAB_KEY);
   const exists = [...buttons].some((btn) => btn.dataset.tab === saved);
   selectTab(exists ? saved : buttons[0].dataset.tab);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  initScaling().catch((error) => console.error('Window scaling unavailable:', error));
   initTabs();
   initAutoOpen();
   initBackup();
+  initAbout();
   restoreUiSettings();
 
   const checkboxes = document.querySelectorAll('input[type="checkbox"][data-script]');
@@ -280,11 +340,13 @@ document.addEventListener('DOMContentLoaded', () => {
   initVoiceChat();
 });
 
-// ── Voice Chat (PS5) ─────────────────────────────────────────
+// ── Voice Chat ─────────────────────────────────────────────────
 
 const voiceFields = {
   engine: 'voice-engine',
   mic_name: 'voice-mic',
+  keyboard_mic_name: 'voice-mic-keys',
+  ptt_key: 'voice-ptt-key',
   language: 'voice-language',
   local_model: 'voice-model',
 };
@@ -292,43 +354,43 @@ const voiceFields = {
 const PROVIDER_INFO = {
   groq: {
     label: 'Groq',
-    hint: 'Free: about 2,000 messages/day, 20/min. Whisper large-v3, very fast.',
+    hint: 'Free: ~2,000 requests/day.',
     url: 'https://console.groq.com/keys',
     placeholder: 'gsk_...',
   },
   gemini: {
     label: 'Google Gemini',
-    hint: 'Free tier from Google AI Studio (limits per model shown in AI Studio). Free-tier data may be used by Google to improve its models.',
+    hint: 'Free tier (data may be used for training).',
     url: 'https://aistudio.google.com/apikey',
     placeholder: 'AIza...',
   },
   deepgram: {
     label: 'Deepgram',
-    hint: '$200 free credit on sign-up, no card needed. Nova-3 is very fast and uses your names list as key terms.',
+    hint: '$200 free credit.',
     url: 'https://console.deepgram.com/',
     placeholder: 'Deepgram API key',
   },
   elevenlabs: {
     label: 'ElevenLabs',
-    hint: 'Free plan includes monthly credits usable for Scribe speech-to-text.',
+    hint: 'Free monthly credits.',
     url: 'https://elevenlabs.io/app/settings/api-keys',
     placeholder: 'sk_...',
   },
   mistral: {
     label: 'Mistral',
-    hint: 'Free Experiment plan (phone verification, low rate limits; requests may be used for training). Uses your names list for spelling.',
+    hint: 'Free plan (low rate limits).',
     url: 'https://console.mistral.ai/api-keys',
     placeholder: 'Mistral API key',
   },
   openai: {
     label: 'OpenAI',
-    hint: 'Paid per minute of audio. gpt-4o-transcribe is the most accurate, whisper-1 is cheaper.',
+    hint: 'Paid per minute.',
     url: 'https://platform.openai.com/api-keys',
     placeholder: 'sk-...',
   },
   custom: {
     label: 'Custom',
-    hint: 'Any OpenAI-compatible /audio/transcriptions server. Set the base URL ending in /v1.',
+    hint: 'OpenAI-compatible server, base URL ending in /v1.',
     url: null,
     placeholder: 'API key',
   },
@@ -391,7 +453,7 @@ function renderVocab() {
     chip.append(remove);
     box.append(chip);
   });
-  voiceEl('voice-vocab-count').textContent = `${vocabWords.length} words.`;
+  voiceEl('voice-vocab-count').textContent = `${vocabWords.length} words`;
 }
 
 // Adds every comma-separated word in `text`, skipping duplicates (case-insensitive).
@@ -658,19 +720,29 @@ async function refreshEngineStatus() {
     `Model: ${modelReady ? 'ready' : 'not downloaded'}`;
 }
 
+// Fills both mic pickers: the controller mic and the keyboard & mouse (headset) mic.
 async function loadMicList() {
-  const select = voiceEl('voice-mic');
   const devices = await invoke('list_input_devices');
-  select.innerHTML = '';
-  select.add(new Option('Windows default microphone', ''));
-  const names = new Set(devices);
-  // Keep the saved value selectable even if the controller is unplugged right now.
-  if (voiceSettings.mic_name) names.add(voiceSettings.mic_name);
-  for (const name of names) {
-    const label = name === 'Wireless Controller' ? 'DualSense (Wireless Controller)' : name;
-    select.add(new Option(label, name));
+  for (const [id, key] of [['voice-mic', 'mic_name'], ['voice-mic-keys', 'keyboard_mic_name']]) {
+    const select = voiceEl(id);
+    select.innerHTML = '';
+    select.add(new Option('Windows default microphone', ''));
+    // "Wireless Controller" matches the DualSense mic by name, even while it's unplugged.
+    const names = new Set(['Wireless Controller', ...devices]);
+    if (voiceSettings[key]) names.add(voiceSettings[key]);
+    for (const name of names) {
+      const label = name === 'Wireless Controller' ? 'DualSense controller mic' : name;
+      select.add(new Option(label, name));
+    }
+    select.value = voiceSettings[key];
   }
-  select.value = voiceSettings.mic_name;
+}
+
+function showPttHint() {
+  const select = voiceEl('voice-ptt-key');
+  const label = select.options[select.selectedIndex]?.text.split(' (')[0] || 'Off';
+  voiceEl('voice-ptt-hint').textContent = label;
+  voiceEl('voice-ptt-or').hidden = select.value === 'off';
 }
 
 async function voiceDownload(what, button) {
@@ -699,7 +771,7 @@ async function initVoiceChat() {
   }
 
   for (const [key, id] of Object.entries(voiceFields)) {
-    if (key !== 'mic_name' && key !== 'local_model') voiceEl(id).value = voiceSettings[key];
+    if (!['mic_name', 'keyboard_mic_name', 'local_model'].includes(key)) voiceEl(id).value = voiceSettings[key];
   }
   voiceEl('voice-gpu').checked = voiceSettings.local_gpu;
   renderProviderTable();
@@ -719,7 +791,9 @@ async function initVoiceChat() {
   for (const id of [...otherFields, 'voice-gpu']) {
     voiceEl(id).addEventListener('change', saveVoiceSettings);
   }
-  voiceEl('voice-mic').addEventListener('focus', loadMicList);
+  for (const id of ['voice-mic', 'voice-mic-keys']) voiceEl(id).addEventListener('focus', loadMicList);
+  showPttHint();
+  voiceEl('voice-ptt-key').addEventListener('change', showPttHint);
   voiceEl('voice-dl-engine').addEventListener('click', (e) => voiceDownload('engine', e.target));
   voiceEl('voice-dl-model').addEventListener('click', (e) => voiceDownload('model', e.target));
 
@@ -732,7 +806,7 @@ async function initVoiceChat() {
   listen('voice-status', ({ payload }) => {
     const last = voiceEl('voice-last');
     if (payload.state === 'disabled') {
-      last.textContent = "Open a friend's chat in-game, then hold the mic button.";
+      last.textContent = '';
       return;
     }
     const text = payload.text ? `“${payload.text}”` : '';
