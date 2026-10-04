@@ -1,12 +1,12 @@
-## [1.3.0](https://github.com/[secure]/genshin-utility/compare/v1.2.0...v1.3.0) (2026-10-04)
+## [1.3.0](https://github.com/Deshan-Samarathunga/genshin-utility/compare/v1.2.0...v1.3.0) (2026-10-04)
 
 ### Features
 
-* **voice:** talk with the PS button over USB or Bluetooth ([814262e](https://github.com/[secure]/genshin-utility/commit/814262e0f1084b6814fbb479e55f857197dfb9df))
+* **voice:** talk with the PS button over USB or Bluetooth ([814262e](https://github.com/Deshan-Samarathunga/genshin-utility/commit/814262e0f1084b6814fbb479e55f857197dfb9df))
 
 ### Bug Fixes
 
-* **voice:** open the mic only while talking ([02774b6](https://github.com/[secure]/genshin-utility/commit/02774b668bdc6495bf3e4bc5dad6ae26227919c9))
+* **voice:** open the mic only while talking ([02774b6](https://github.com/Deshan-Samarathunga/genshin-utility/commit/02774b668bdc6495bf3e4bc5dad6ae26227919c9))
 
 ## [1.2.0](https://github.com/Deshan-Samarathunga/genshin-utility/compare/v1.1.0...v1.2.0) (2026-10-04)
 
