@@ -8,7 +8,7 @@
     [
       "@semantic-release/exec",
       {
-        "prepareCmd": "node scripts/set-version.mjs ${nextRelease.version} && node scripts/clean-bundles.mjs && npm --prefix tauri-gui run tauri build"
+        "prepareCmd": "node scripts/set-version.mjs ${nextRelease.version} && node scripts/clean-bundles.mjs && node scripts/build-release.mjs ${nextRelease.version}"
       }
     ],
     [
@@ -30,7 +30,10 @@
       {
         "assets": [
           { "path": "tauri-gui/src-tauri/target/release/bundle/nsis/*-setup.exe", "label": "Windows installer (setup.exe)" },
-          { "path": "tauri-gui/src-tauri/target/release/bundle/msi/*.msi", "label": "Windows installer (MSI)" }
+          { "path": "tauri-gui/src-tauri/target/release/bundle/msi/*.msi", "label": "Windows installer (MSI)" },
+          { "path": "tauri-gui/src-tauri/target/release/bundle/nsis/*-setup.exe.sig", "label": "Installer signature (setup.exe)" },
+          { "path": "tauri-gui/src-tauri/target/release/bundle/msi/*.msi.sig", "label": "Installer signature (MSI)" },
+          { "path": "tauri-gui/src-tauri/target/release/bundle/latest.json", "label": "Update manifest (latest.json)" }
         ]
       }
     ]

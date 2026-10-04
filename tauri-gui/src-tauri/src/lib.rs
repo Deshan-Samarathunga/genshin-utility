@@ -4,6 +4,7 @@ pub mod commands;
 pub mod hook;
 pub mod macros;
 pub mod state;
+pub mod updater;
 pub mod voice;
 
 use state::AppState;
@@ -23,6 +24,8 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .manage(updater::PendingUpdate::default())
         .setup(|app| {
             let from_genshin = std::env::args().any(|a| a == autostart::FROM_GENSHIN_ARG);
             autostart::show_main_window(app.handle(), !from_genshin);
@@ -78,6 +81,8 @@ pub fn run() {
             commands::set_auto_open,
             commands::export_settings,
             commands::import_settings,
+            updater::check_update,
+            updater::install_update,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
