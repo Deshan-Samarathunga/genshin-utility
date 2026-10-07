@@ -78,49 +78,51 @@ pub async fn loot_loop_step() {
     let _ = enigo.key(Key::Space, Direction::Click);
 }
 
+// Artifact Remover click positions (1920x1080), shared with the all-characters mode (artifacts.rs).
+pub(crate) const ARTIFACT_PATH: &[(i32, i32)] = &[
+    (1335, 735), (967, 787), (682, 780), (397, 638),
+    (555, 558), (722, 771), (804, 784), (1222, 765),
+];
+/// The five artifact slot tabs.
+pub(crate) const ARTIFACT_TABS: &[(i32, i32)] = &[(89, 43), (195, 41), (309, 40), (415, 37), (525, 44)];
+pub(crate) const REMOVE_BUTTON: (i32, i32) = (1558, 1002);
+pub(crate) const BACK_BUTTON: (i32, i32) = (1838, 35);
+pub(crate) const PREV_CHARACTER: (i32, i32) = (68, 535);
+pub(crate) const NEXT_CHARACTER: (i32, i32) = (1840, 536);
+
 pub fn artifact_remover_run() {
     let mut enigo = Enigo::new(&Settings::default()).unwrap();
-    
-    let artifacts = [
-        (1335, 735), (967, 787), (682, 780), (397, 638),
-        (555, 558), (722, 771), (804, 784), (1222, 765),
-    ];
-    let panel_items = [
-        (89, 43), (195, 41), (309, 40), (415, 37), (525, 44),
-    ];
-    let remove_btn = (1558, 1002);
-    let back_btn = (1838, 35);
-    let next_btn = (1840, 536);
+
+    let artifacts = ARTIFACT_PATH;
+    let panel_items = ARTIFACT_TABS;
+    let remove_btn = REMOVE_BUTTON;
+    let back_btn = BACK_BUTTON;
 
     // Step 1: Click all artifact coordinates
-    click_sequence(&artifacts, 80);
+    click_sequence(artifacts, 80);
     std::thread::sleep(Duration::from_millis(200));
 
     // Step 2: Click each panel item then remove
-    for &(px, py) in &panel_items {
+    for &(px, py) in panel_items {
         click_at(px, py);
         std::thread::sleep(Duration::from_millis(200));
         click_at(remove_btn.0, remove_btn.1);
         std::thread::sleep(Duration::from_millis(200));
     }
 
-    // Step 3: Back button
+    // Step 3: Back button. Moving to the next character is left to the player (Right arrow).
     std::thread::sleep(Duration::from_millis(500));
     click_at(back_btn.0, back_btn.1);
-    std::thread::sleep(Duration::from_millis(1000));
-
-    // Step 4: Next button
-    click_at(next_btn.0, next_btn.1);
 }
 
 pub fn artifact_remover_prev() {
     let mut enigo = Enigo::new(&Settings::default()).unwrap();
-    click_at(68, 535);
+    click_at(PREV_CHARACTER.0, PREV_CHARACTER.1);
 }
 
 pub fn artifact_remover_next() {
     let mut enigo = Enigo::new(&Settings::default()).unwrap();
-    click_at(1840, 536);
+    click_at(NEXT_CHARACTER.0, NEXT_CHARACTER.1);
 }
 
 pub async fn auto_message_run(state: std::sync::Arc<std::sync::Mutex<crate::state::MacroState>>, text: String, count: u32) {

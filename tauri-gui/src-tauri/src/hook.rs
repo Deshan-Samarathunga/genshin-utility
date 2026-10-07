@@ -124,15 +124,25 @@ unsafe extern "system" fn keyboard_hook_proc(n_code: i32, w_param: WPARAM, l_par
 
                     let mut macro_state = state.0.lock().unwrap();
 
-                    if vk_code == 115 && macro_state.auto_dialogue {
+                    if vk_code == 115 && (macro_state.auto_dialogue || macro_state.story_mode) {
                         println!("F4 triggered auto_dialogue");
                         macro_state.auto_dialogue_active = !macro_state.auto_dialogue_active;
                         handled = true;
                     } else if vk_code == 118 && macro_state.artifact_remover {
-                        println!("F7 triggered artifact_remover");
-                        handle.spawn(async {
-                            crate::macros::artifact_remover_run();
-                        });
+                        let shift = windows::Win32::UI::Input::KeyboardAndMouse::GetAsyncKeyState(
+                            windows::Win32::UI::Input::KeyboardAndMouse::VK_SHIFT.0 as i32,
+                        ) < 0;
+                        if crate::artifacts::running() {
+                            // F7 / Shift+F7 while every character is being done: stop.
+                            crate::artifacts::cancel();
+                        } else if shift {
+                            handle.spawn(crate::artifacts::remove_all());
+                        } else {
+                            println!("F7 triggered artifact_remover");
+                            handle.spawn(async {
+                                crate::macros::artifact_remover_run();
+                            });
+                        }
                         handled = true;
                     } else if vk_code == 37 && macro_state.artifact_remover {
                         println!("Left triggered artifact_remover_prev");
