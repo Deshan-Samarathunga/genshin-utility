@@ -1,3 +1,15 @@
+## [1.4.0](https://github.com/[secure]/genshin-utility/compare/v1.3.0...v1.4.0) (2026-10-07)
+
+### Features
+
+* **artifacts:** remove artifacts from every character with Shift+F7 ([43feef3](https://github.com/[secure]/genshin-utility/commit/43feef371323d3641fcbb929aaf815eed2419cb6))
+* portable version that runs without installing ([7b5bf27](https://github.com/[secure]/genshin-utility/commit/7b5bf27b1b0c18b0bed51465cd10dc2f70e51ffd))
+* **story:** story mode with AI choices, summaries and saved dialogue ([b67ce9e](https://github.com/[secure]/genshin-utility/commit/b67ce9ecbb2c8ac2cb249cc37dc93f81cb3a2b3c))
+
+### Bug Fixes
+
+* **voice:** pick up quiet speech and keep the last word ([be29dd6](https://github.com/[secure]/genshin-utility/commit/be29dd691aa28ca9217e46bd225bf183ea8f909a))
+
 ## [1.3.0](https://github.com/Deshan-Samarathunga/genshin-utility/compare/v1.2.0...v1.3.0) (2026-10-04)
 
 ### Features
