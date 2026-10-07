@@ -131,7 +131,7 @@ fn wav_part(wav: Vec<u8>) -> Result<reqwest::multipart::Part, String> {
 }
 
 /// Sends a request and returns the JSON body, turning HTTP errors into readable messages.
-async fn send_json(request: reqwest::RequestBuilder, who: &str) -> Result<serde_json::Value, String> {
+pub(crate) async fn send_json(request: reqwest::RequestBuilder, who: &str) -> Result<serde_json::Value, String> {
     let response = request
         .timeout(Duration::from_secs(60))
         .send()

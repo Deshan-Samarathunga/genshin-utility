@@ -26,10 +26,10 @@ use crate::state::AppState;
 
 // Chat panel coordinates at 1080p (same layout Auto Message uses).
 const CHAT_INPUT: (i32, i32) = (441, 1001);
+/// Extra recording after the take ends, so the last word isn't clipped.
+const MIC_TAIL_MS: u64 = 350;
 /// How many typed takes double-tap can undo, newest first.
 const MAX_UNDO: usize = 20;
-/// Recordings quieter than this are treated as silence and never sent to the engine.
-const SILENCE_RMS: f32 = 0.003;
 
 pub struct VoiceState {
     settings: Mutex<VoiceSettings>,
@@ -122,10 +122,11 @@ impl VoiceState {
     async fn transcribe(&self, samples: Vec<f32>, rate: u32) -> Result<String, String> {
         let s = self.settings();
         let mut samples = audio::resample_to_16k(&samples, rate);
-        if samples.len() < (audio::WHISPER_RATE as usize) / 4 || audio::rms(&samples) < SILENCE_RMS {
+        let (silence, max_gain) = audio::sensitivity(&s.mic_sensitivity);
+        if samples.len() < (audio::WHISPER_RATE as usize) / 4 || audio::speech_level(&samples) < silence {
             return Ok(String::new());
         }
-        audio::normalize(&mut samples);
+        audio::normalize(&mut samples, max_gain);
         let wav = audio::wav_bytes(&samples)?;
         let port = if s.is_local() { Some(self.ensure_server(&s).await?) } else { None };
         let raw = stt::transcribe(&self.client, &s, port, wav).await?;
@@ -350,30 +351,29 @@ pub fn start(app: AppHandle, macro_state: AppState, voice: VoiceHandle) {
                         emit(&app, "idle", "", "");
                     }
                     Action::StopAndTranscribe => {
-                        let take = match recorder.take().map(audio::Recorder::finish) {
-                            Some(Ok(take)) => take,
-                            Some(Err(e)) => {
-                                let _ = done_tx.send(Err(format!("{mic_label}: {e}")));
-                                continue;
-                            }
-                            None => {
-                                let _ = done_tx.send(Err(format!("{mic_label} not available")));
-                                continue;
-                            }
+                        let Some(recorder) = recorder.take() else {
+                            let _ = done_tx.send(Err(format!("{mic_label} not available")));
+                            continue;
                         };
-                        let wanted = mic_name.trim().to_lowercase();
-                        let message = if !wanted.is_empty() && !take.device_name.to_lowercase().contains(&wanted) {
-                            format!("Transcribing… (“{}” not found — used {})", mic_name.trim(), take.device_name)
-                        } else {
-                            "Transcribing…".to_string()
-                        };
-                        emit(&app, "transcribing", "", &message);
-                        let (samples, rate) = (take.samples, take.rate);
-                        let voice = voice.clone();
-                        let done_tx = done_tx.clone();
+                        emit(&app, "transcribing", "", "Transcribing…");
+                        let (mic_label, wanted) = (mic_label.to_string(), mic_name.trim().to_string());
+                        let (voice, done_tx, app) = (voice.clone(), done_tx.clone(), app.clone());
                         tauri::async_runtime::spawn(async move {
+                            // Keep recording a moment so the last word isn't cut off by the tap/release.
+                            tokio::time::sleep(Duration::from_millis(MIC_TAIL_MS)).await;
+                            let take = match recorder.finish() {
+                                Ok(take) => take,
+                                Err(e) => {
+                                    let _ = done_tx.send(Err(format!("{mic_label}: {e}")));
+                                    return;
+                                }
+                            };
+                            if !wanted.is_empty() && !take.device_name.to_lowercase().contains(&wanted.to_lowercase()) {
+                                let message = format!("Transcribing… (“{wanted}” not found — used {})", take.device_name);
+                                emit(&app, "transcribing", "", &message);
+                            }
                             let started = Instant::now();
-                            let result = voice.transcribe(samples, rate).await;
+                            let result = voice.transcribe(take.samples, take.rate).await;
                             let _ = done_tx.send(result.map(|text| (text, started.elapsed().as_secs_f32())));
                         });
                     }

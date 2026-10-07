@@ -198,12 +198,44 @@ pub fn rms(samples: &[f32]) -> f32 {
     (samples.iter().map(|s| s * s).sum::<f32>() / samples.len() as f32).sqrt()
 }
 
-/// Scales quiet recordings up (controller mics are soft) without clipping.
-pub fn normalize(samples: &mut [f32]) {
-    let peak = samples.iter().fold(0.0f32, |m, s| m.max(s.abs()));
-    if peak > 0.0 && peak < 0.5 {
-        let gain = (0.9 / peak).min(8.0);
-        samples.iter_mut().for_each(|s| *s *= gain);
+/// How hard quiet speech is boosted: (silence cutoff, max gain).
+pub fn sensitivity(level: &str) -> (f32, f32) {
+    match level {
+        "normal" => (0.004, 8.0),
+        "max" => (0.0005, 80.0),
+        _ => (0.0015, 30.0), // "high"
+    }
+}
+
+/// Loudness of the speech in a clip: RMS of its louder 50 ms windows, so silence before and after
+/// speaking (Bluetooth mics start up quietly) doesn't drag it down.
+pub fn speech_level(samples: &[f32]) -> f32 {
+    let window = (WHISPER_RATE / 20) as usize;
+    let mut levels: Vec<f32> = samples.chunks(window).filter(|c| c.len() == window).map(rms).collect();
+    if levels.is_empty() {
+        return rms(samples);
+    }
+    levels.sort_by(f32::total_cmp);
+    levels[levels.len() * 9 / 10]
+}
+
+/// Removes DC offset and boosts quiet speech towards a normal level (up to `max_gain`), with a soft
+/// limiter so the loud bits and button clicks don't clip.
+pub fn normalize(samples: &mut [f32], max_gain: f32) {
+    if samples.is_empty() {
+        return;
+    }
+    let mean = samples.iter().sum::<f32>() / samples.len() as f32;
+    samples.iter_mut().for_each(|s| *s -= mean);
+    let level = speech_level(samples);
+    if level <= 0.0 {
+        return;
+    }
+    let gain = (0.12 / level).clamp(1.0, max_gain);
+    for s in samples.iter_mut() {
+        let x = *s * gain;
+        // Linear below 0.6, then eases towards 1.0.
+        *s = if x.abs() <= 0.6 { x } else { x.signum() * (0.6 + 0.4 * ((x.abs() - 0.6) / 0.4).tanh()) };
     }
 }
 
@@ -245,6 +277,19 @@ mod tests {
         let out = resample_to_16k(&input, 44_100);
         assert_eq!(out.len(), 16_000);
         assert!((out[100] - 0.5).abs() < 1e-6);
+    }
+
+    #[test]
+    fn quiet_speech_is_boosted_without_clipping() {
+        // 1 s of silence, then 1 s of very quiet "speech" with one loud click.
+        let mut samples = vec![0.0f32; 16_000];
+        samples.extend((0..16_000).map(|i| 0.004 * ((i as f32) * 0.05).sin()));
+        samples[20_000] = 0.9;
+        assert!(speech_level(&samples) > sensitivity("high").0);
+        normalize(&mut samples, sensitivity("high").1);
+        let peak = samples.iter().fold(0.0f32, |m, s| m.max(s.abs()));
+        assert!(peak <= 1.0);
+        assert!(speech_level(&samples) > 0.05);
     }
 
     #[test]

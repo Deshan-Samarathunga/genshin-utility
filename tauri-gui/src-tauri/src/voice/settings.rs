@@ -41,6 +41,8 @@ pub struct VoiceSettings {
     pub keyboard_mic_name: String,
     /// Push-to-talk trigger: "off", "mouse4", "mouse5", "f9" .. "f12" (see `ptt::KEYS`).
     pub ptt_key: String,
+    /// How much quiet speech is boosted: "normal", "high" or "max".
+    pub mic_sensitivity: String,
     /// Whisper language code ("en", "auto", ...).
     pub language: String,
     /// ggml model id, e.g. "small.en-q5_1" -> ggml-small.en-q5_1.bin
@@ -69,6 +71,7 @@ impl Default for VoiceSettings {
             mic_name: "Wireless Controller".into(),
             keyboard_mic_name: String::new(),
             ptt_key: "mouse4".into(),
+            mic_sensitivity: "high".into(),
             language: "en".into(),
             local_model: "small.en-q5_1".into(),
             local_gpu: false,
