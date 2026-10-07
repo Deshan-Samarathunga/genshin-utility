@@ -72,6 +72,10 @@ async function handleToggle(event) {
   
   checkbox.disabled = false;
   updateTabDot(scriptName, checkbox.checked);
+  // Auto Dialogue and Story Mode switch each other off.
+  const other = { auto_dialogue: 'story_mode', story_mode: 'auto_dialogue' }[scriptName];
+  const otherBox = other && document.querySelector(`input[data-script="${other}"]`);
+  if (otherBox) updateToggleState(otherBox);
 }
 
 // ── Sidebar tabs ─────────────────────────────────────────────
@@ -119,15 +123,23 @@ const UI_SETTINGS_KEY = 'genshin-utility.ui';
 // Settings key -> input id.
 const UI_FIELDS = {
   dialogue_speed: 'dialogue-speed',
+  artifact_speed: 'artifact-speed',
   auto_message_text: 'auto-message-text',
   auto_message_count: 'auto-message-count',
+  story_speed: 'story-speed',
+  story_match_length: 'story-match-length',
+  story_detail: 'story-detail',
+  story_provider: 'story-provider',
+  story_model: 'story-model',
 };
 
 function readUiSettings() {
   const ui = {};
   for (const [key, id] of Object.entries(UI_FIELDS)) {
     const input = document.getElementById(id);
-    if (input) ui[key] = input.type === 'number' ? Number(input.value) : input.value;
+    if (!input) continue;
+    if (input.type === 'checkbox') ui[key] = input.checked;
+    else ui[key] = input.type === 'number' ? Number(input.value) : input.value;
   }
   return ui;
 }
@@ -146,12 +158,31 @@ async function restoreUiSettings() {
   for (const [key, id] of Object.entries(UI_FIELDS)) {
     const input = document.getElementById(id);
     if (!input) continue;
-    if (saved[key] !== undefined && saved[key] !== null) input.value = saved[key];
+    if (saved[key] !== undefined && saved[key] !== null) {
+      if (input.type === 'checkbox') input.checked = !!saved[key];
+      else input.value = saved[key];
+    }
     input.addEventListener('change', saveUiSettings);
   }
   const speed = Number(saved.dialogue_speed);
   if (speed >= 50) {
     await invoke('set_dialogue_speed', { speed }).catch(console.error);
+  }
+  const artifactSpeed = document.getElementById('artifact-speed');
+  const artifactSpeedValue = document.getElementById('artifact-speed-value');
+  // Older saves stored "normal" / "fast" / "fastest".
+  const legacy = { normal: 1, fast: 5, fastest: 9 };
+  if (legacy[saved.artifact_speed]) artifactSpeed.value = legacy[saved.artifact_speed];
+  const pushArtifactSpeed = () => {
+    artifactSpeedValue.textContent = artifactSpeed.value;
+    invoke('set_artifact_speed', { level: Number(artifactSpeed.value) }).catch(console.error);
+  };
+  artifactSpeed.addEventListener('input', pushArtifactSpeed);
+  artifactSpeed.addEventListener('change', saveUiSettings);
+  pushArtifactSpeed();
+  const storySpeed = Number(saved.story_speed);
+  if (storySpeed >= 50) {
+    await invoke('set_story_speed', { speed: storySpeed }).catch(console.error);
   }
 }
 
@@ -228,6 +259,7 @@ async function initAbout() {
   const bar = document.getElementById('update-progress');
   const settingsTab = document.querySelector('.tab-settings');
   let available = null;
+  const portable = await invoke('is_portable').catch(() => false);
 
   try {
     version.textContent = `v${await window.__TAURI__.app.getVersion()}`;
@@ -240,7 +272,7 @@ async function initAbout() {
     settingsTab.classList.toggle('has-update', !!update);
     if (update) {
       desc.textContent = `v${update.version} available`;
-      button.textContent = `Update to v${update.version}`;
+      button.textContent = portable ? `Download v${update.version}` : `Update to v${update.version}`;
     }
   };
 
@@ -259,6 +291,10 @@ async function initAbout() {
   };
 
   const install = async () => {
+    if (portable) {
+      window.__TAURI__.opener.openUrl('https://github.com/Deshan-Samarathunga/genshin-utility/releases/latest');
+      return;
+    }
     button.disabled = true;
     bar.hidden = false;
     desc.textContent = `Downloading v${available.version}…`;
@@ -337,8 +373,385 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  const storySpeedInput = document.getElementById('story-speed');
+  storySpeedInput.addEventListener('change', async (e) => {
+    const speed = parseInt(e.target.value, 10);
+    if (speed >= 50) await invoke('set_story_speed', { speed }).catch(console.error);
+  });
+
+  // Progress of Shift+F7 (artifacts from every character).
+  listen('artifact-status', ({ payload }) => setStatus(payload));
+
   initVoiceChat();
+  initStory();
 });
+
+// ── Auto Dialogue story mode ─────────────────────────────────────────────────
+
+const STORY_MODELS = {
+  groq: 'llama-3.3-70b-versatile',
+  gemini: 'gemini-3.5-flash-lite',
+  openai: 'gpt-4o-mini',
+  mistral: 'mistral-small-latest',
+  custom: 'gpt-4o-mini',
+};
+
+// History session that new Story Mode runs are added to (one story over several sittings).
+const STORY_CONTINUE_KEY = 'genshin-utility.story-continue';
+let storyContinue = Number(localStorage.getItem(STORY_CONTINUE_KEY)) || null;
+
+function setStoryContinue(id) {
+  storyContinue = id || null;
+  if (storyContinue) localStorage.setItem(STORY_CONTINUE_KEY, String(storyContinue));
+  else localStorage.removeItem(STORY_CONTINUE_KEY);
+  pushStorySettings();
+}
+
+function pushStorySettings() {
+  const provider = document.getElementById('story-provider');
+  const model = document.getElementById('story-model');
+  model.placeholder = STORY_MODELS[provider.value] || '';
+  invoke('set_story_settings', {
+    settings: {
+      provider: provider.value,
+      model: model.value.trim(),
+      match_length: document.getElementById('story-match-length').checked,
+      continue_from: storyContinue,
+      detail: document.getElementById('story-detail').value,
+    },
+  }).catch(console.error);
+}
+
+// ── Story history: every run is kept; tick sessions to merge them, related ones are suggested ──
+
+let storySessions = [];
+const storyTicked = new Set();
+const storyOpen = new Set();
+// Sessions whose dialogue list is showing, and their loaded transcripts.
+const storyDialogueOpen = new Set();
+const storyTranscripts = new Map();
+
+// Splits "Speaker: text" (speaker is a short name, no sentence) from a transcript line.
+function splitSpeaker(line) {
+  const m = line.match(/^([^:.!?]{1,40}):\s+(.+)$/);
+  return m ? [m[1], m[2]] : ['', line];
+}
+
+function renderDialogue(container, lines, filter) {
+  container.replaceChildren();
+  const needle = filter.trim().toLowerCase();
+  let shown = 0;
+  for (const line of lines) {
+    if (needle && !line.toLowerCase().includes(needle)) continue;
+    shown++;
+    const row = document.createElement('div');
+    if (line.startsWith('--- ')) {
+      row.className = 'dlg-break';
+      row.textContent = line.replace(/^-+\s*|\s*-+$/g, '');
+    } else if (line.startsWith('> ')) {
+      row.className = 'dlg-choice';
+      row.textContent = line.replace(/^>\s*(Chose:)?\s*/, '');
+    } else {
+      const [speaker, text] = splitSpeaker(line);
+      row.className = 'dlg-line';
+      if (speaker) {
+        const who = document.createElement('span');
+        who.className = 'dlg-speaker';
+        who.textContent = speaker;
+        row.append(who);
+      }
+      const said = document.createElement('span');
+      said.textContent = text;
+      row.append(said);
+    }
+    container.append(row);
+  }
+  if (!shown) {
+    const empty = document.createElement('p');
+    empty.className = 'voice-note';
+    empty.textContent = needle ? 'No lines match' : 'No dialogue saved';
+    container.append(empty);
+  }
+}
+
+function storyDialogue(session) {
+  const wrap = document.createElement('div');
+  wrap.className = 'story-dialogue';
+  const search = document.createElement('input');
+  search.type = 'text';
+  search.placeholder = 'Search lines or names';
+  search.spellcheck = false;
+  const list = document.createElement('div');
+  list.className = 'dlg-list';
+  const show = () => renderDialogue(list, storyTranscripts.get(session.id) || [], search.value);
+  search.addEventListener('input', show);
+  wrap.append(search, list);
+  if (storyTranscripts.has(session.id)) {
+    show();
+  } else {
+    list.textContent = 'Loading…';
+    invoke('story_transcript', { id: session.id })
+      .then((lines) => {
+        storyTranscripts.set(session.id, lines);
+        show();
+      })
+      .catch((e) => (list.textContent = String(e)));
+  }
+  return wrap;
+}
+
+function storyDate(ms) {
+  return new Date(ms).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function storyButton(label, className, onClick) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = className;
+  button.textContent = label;
+  button.addEventListener('click', onClick);
+  return button;
+}
+
+// Shows a summary's light Markdown (headings, bullets, **bold**) without trusting it as HTML.
+function renderSummary(container, markdown) {
+  container.replaceChildren();
+  let list = null;
+  const inline = (el, text) => {
+    text.split(/(\*\*[^*]+\*\*)/).forEach((piece) => {
+      if (piece.startsWith('**') && piece.endsWith('**') && piece.length > 4) {
+        const strong = document.createElement('strong');
+        strong.textContent = piece.slice(2, -2);
+        el.append(strong);
+      } else if (piece) {
+        el.append(piece);
+      }
+    });
+    return el;
+  };
+  for (const raw of markdown.split('\n')) {
+    const line = raw.trim();
+    if (!line) {
+      list = null;
+      continue;
+    }
+    const heading = line.match(/^(#{1,4})\s+(.*)$/);
+    const bullet = line.match(/^[-*•]\s+(.*)$/);
+    if (heading) {
+      list = null;
+      container.append(inline(document.createElement(heading[1].length <= 2 ? 'h4' : 'h5'), heading[2]));
+    } else if (bullet) {
+      if (!list) {
+        list = document.createElement('ul');
+        container.append(list);
+      }
+      list.append(inline(document.createElement('li'), bullet[1]));
+    } else {
+      list = null;
+      container.append(inline(document.createElement('p'), line));
+    }
+  }
+}
+
+function storyItemBody(session) {
+  const body = document.createElement('div');
+  body.className = 'story-item-body';
+  const text = document.createElement('div');
+  text.className = 'story-summary-text';
+  if (session.summary) renderSummary(text, session.summary);
+  else text.textContent = 'Not summarized yet (offline or the AI was busy). It retries when the app opens, or press Retry.';
+  const actions = document.createElement('div');
+  actions.className = 'settings-actions';
+  if (session.summary) {
+    actions.append(
+      storyButton('Copy', 'btn', async () => {
+        await navigator.clipboard.writeText(`${session.title}\n\n${session.summary}`.trim());
+        setStatus('Summary copied');
+      }),
+    );
+    const again = storyButton('Summarize again', 'btn', () => mergeStories([session.id], again));
+    again.title = 'Rewrite the summary with the current Summary setting';
+    actions.append(again);
+  } else {
+    const retry = storyButton('Retry summary', 'btn', () => mergeStories([session.id], retry));
+    actions.append(retry);
+  }
+  const dialogueOpen = storyDialogueOpen.has(session.id);
+  actions.append(
+    storyButton(dialogueOpen ? 'Hide dialogue' : `Dialogue (${session.lines})`, 'btn', () => {
+      if (dialogueOpen) storyDialogueOpen.delete(session.id);
+      else storyDialogueOpen.add(session.id);
+      renderStoryHistory();
+    }),
+  );
+  const continuing = storyContinue === session.id;
+  const cont = storyButton(continuing ? 'Stop continuing' : 'Continue this story', 'btn', () => {
+    setStoryContinue(continuing ? null : session.id);
+    renderStoryHistory();
+  });
+  cont.title = 'Add your next Story Mode runs to this session; lines you already read are skipped';
+  actions.append(cont);
+  const del = storyButton('Delete', 'btn btn-danger', async () => {
+    if (del.dataset.armed) {
+      await invoke('story_delete', { id: session.id }).catch(console.error);
+    } else {
+      del.dataset.armed = '1';
+      del.textContent = 'Click again to delete';
+    }
+  });
+  actions.append(del);
+  body.append(text, actions);
+  if (dialogueOpen) body.append(storyDialogue(session));
+  return body;
+}
+
+function renderStoryHistory() {
+  const list = document.getElementById('story-history');
+  // The continued session was deleted: new runs start fresh again.
+  if (storyContinue && storySessions.length && !storySessions.some((s) => s.id === storyContinue)) setStoryContinue(null);
+  const byId = new Map(storySessions.map((s) => [s.id, s]));
+  for (const id of [...storyTicked]) if (!byId.has(id)) storyTicked.delete(id);
+  // Sessions related to anything ticked are the suggestions.
+  const suggested = new Set();
+  storyTicked.forEach((id) => byId.get(id)?.related.forEach((r) => !storyTicked.has(r) && suggested.add(r)));
+
+  list.replaceChildren();
+  if (!storySessions.length) {
+    const empty = document.createElement('p');
+    empty.className = 'voice-note';
+    empty.textContent = 'No sessions yet';
+    list.append(empty);
+  }
+  for (const session of storySessions) {
+    const item = document.createElement('div');
+    item.className = 'story-item';
+    item.classList.toggle('ticked', storyTicked.has(session.id));
+    item.classList.toggle('suggested', suggested.has(session.id));
+
+    const head = document.createElement('div');
+    head.className = 'story-item-head';
+    const tick = document.createElement('input');
+    tick.type = 'checkbox';
+    tick.checked = storyTicked.has(session.id);
+    tick.addEventListener('change', () => {
+      if (tick.checked) storyTicked.add(session.id);
+      else storyTicked.delete(session.id);
+      renderStoryHistory();
+    });
+    const title = storyButton(
+      session.title || (session.summary ? 'Untitled story' : 'Not summarized'),
+      'story-item-title',
+      () => {
+        if (storyOpen.has(session.id)) storyOpen.delete(session.id);
+        else storyOpen.add(session.id);
+        renderStoryHistory();
+      },
+    );
+    const meta = document.createElement('span');
+    meta.className = 'story-item-meta';
+    meta.textContent = [storyDate(session.id), `${session.lines} lines`, session.parts > 1 ? `${session.parts} sessions` : '']
+      .filter(Boolean)
+      .join(' · ');
+    head.append(tick, title, meta);
+    if (storyContinue === session.id) {
+      const chip = document.createElement('span');
+      chip.className = 'story-chip';
+      chip.textContent = 'Continuing';
+      head.append(chip);
+    }
+    if (suggested.has(session.id)) {
+      const chip = document.createElement('span');
+      chip.className = 'story-chip';
+      chip.textContent = 'Related';
+      head.append(chip);
+    } else if (session.related.length && !storyTicked.has(session.id)) {
+      const pick = storyButton(`${session.related.length} related`, 'story-link', () => {
+        [session.id, ...session.related].forEach((id) => storyTicked.add(id));
+        renderStoryHistory();
+      });
+      pick.title = 'Tick this session and the ones that look like the same story';
+      head.append(pick);
+    }
+    item.append(head);
+    if (storyOpen.has(session.id)) item.append(storyItemBody(session));
+    list.append(item);
+  }
+
+  const merge = document.getElementById('story-merge');
+  merge.disabled = storyTicked.size < 2;
+  merge.textContent = storyTicked.size >= 2 ? `Merge ${storyTicked.size}` : 'Merge';
+  document.getElementById('story-merge-hint').textContent = suggested.size
+    ? `${suggested.size} related session${suggested.size > 1 ? 's' : ''} highlighted`
+    : '';
+}
+
+async function mergeStories(ids, button) {
+  if (button) button.disabled = true;
+  try {
+    await invoke('story_merge', { ids });
+    // The merged session keeps the earliest id; keep continuing it if one of the parts was.
+    if (ids.includes(storyContinue)) setStoryContinue(Math.min(...ids));
+    storyTicked.clear();
+    storyOpen.clear();
+    storyOpen.add(Math.min(...ids));
+    renderStoryHistory();
+  } catch (error) {
+    setStatus(`Error: ${error}`);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+function initStory() {
+  ['story-provider', 'story-model', 'story-match-length', 'story-detail'].forEach((id) => {
+    document.getElementById(id).addEventListener('change', pushStorySettings);
+  });
+  pushStorySettings();
+  const status = document.getElementById('story-status');
+  const merge = document.getElementById('story-merge');
+  merge.addEventListener('click', () => mergeStories([...storyTicked], merge));
+  // Summarize runs saved while offline or recovered after a crash (quietly; stops if still offline).
+  invoke('story_retry_pending').catch(() => {});
+  invoke('story_history')
+    .then((sessions) => {
+      storySessions = sessions || [];
+      if (storySessions[0]) storyOpen.add(storySessions[0].id);
+      renderStoryHistory();
+    })
+    .catch(console.error);
+  listen('story-history', ({ payload }) => {
+    storyTranscripts.clear(); // sessions may have grown (continued) or been merged
+    const known = new Set(storySessions.map((s) => s.id));
+    storySessions = payload;
+    // Open a newly saved run so its summary shows right away.
+    storySessions.filter((s) => !known.has(s.id)).forEach((s) => storyOpen.add(s.id));
+    renderStoryHistory();
+  });
+
+  listen('story', ({ payload }) => {
+    status.dataset.state = payload.state;
+    switch (payload.state) {
+      case 'reading':
+        status.textContent = payload.text || `Reading… ${payload.lines} lines`;
+        break;
+      case 'choosing':
+        status.textContent = 'Choosing…';
+        break;
+      case 'summarizing':
+        status.textContent = payload.text || 'Summarizing…';
+        break;
+      case 'done':
+        status.textContent = '';
+        setStatus('Story summary ready');
+        break;
+      case 'error':
+        status.textContent = payload.text;
+        break;
+      default:
+        status.textContent = '';
+    }
+  });
+}
 
 // ── Voice Chat ─────────────────────────────────────────────────
 
@@ -348,6 +761,7 @@ const voiceFields = {
   keyboard_mic_name: 'voice-mic-keys',
   ptt_key: 'voice-ptt-key',
   language: 'voice-language',
+  mic_sensitivity: 'voice-sensitivity',
   local_model: 'voice-model',
 };
 

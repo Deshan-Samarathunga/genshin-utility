@@ -11,7 +11,13 @@ pub async fn start_script(script_name: String, args: Option<Vec<String>>, state:
     match script_name.as_str() {
         "auto_dialogue" => {
             macro_state.auto_dialogue = true;
+            macro_state.story_mode = false;
             // auto_dialogue_active toggles via F4, but we can reset it to false
+            macro_state.auto_dialogue_active = false;
+        }
+        "story_mode" => {
+            macro_state.story_mode = true;
+            macro_state.auto_dialogue = false;
             macro_state.auto_dialogue_active = false;
         }
         "artifact_remover" => {
@@ -48,6 +54,10 @@ pub async fn stop_script(script_name: String, state: State<'_, AppState>) -> Res
             macro_state.auto_dialogue = false;
             macro_state.auto_dialogue_active = false;
         }
+        "story_mode" => {
+            macro_state.story_mode = false;
+            macro_state.auto_dialogue_active = false;
+        }
         "artifact_remover" => {
             macro_state.artifact_remover = false;
         }
@@ -69,6 +79,7 @@ pub async fn check_status(script_name: String, state: State<'_, AppState>) -> Re
 
     let status = match script_name.as_str() {
         "auto_dialogue" => macro_state.auto_dialogue,
+        "story_mode" => macro_state.story_mode,
         "artifact_remover" => macro_state.artifact_remover,
         "auto_message" => macro_state.auto_message,
         "voice_chat" => macro_state.voice_chat,
@@ -82,6 +93,12 @@ pub async fn check_status(script_name: String, state: State<'_, AppState>) -> Re
 pub async fn set_dialogue_speed(speed: u64, state: State<'_, AppState>) -> Result<(), String> {
     let mut macro_state = state.0.lock().unwrap();
     macro_state.auto_dialogue_speed = speed;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn set_story_speed(speed: u64, state: State<'_, AppState>) -> Result<(), String> {
+    state.0.lock().unwrap().story_speed = speed.max(50);
     Ok(())
 }
 

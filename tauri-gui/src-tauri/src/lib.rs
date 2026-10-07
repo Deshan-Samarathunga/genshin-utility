@@ -1,9 +1,11 @@
+pub mod artifacts;
 pub mod autostart;
 pub mod backup;
 pub mod commands;
 pub mod hook;
 pub mod macros;
 pub mod state;
+pub mod story;
 pub mod updater;
 pub mod voice;
 
@@ -42,6 +44,11 @@ pub fn run() {
                 eprintln!("voice: couldn't create overlay: {e}");
             }
             
+            artifacts::set_app(app.handle().clone());
+            let story: story::StoryHandle = Default::default();
+            story.load_history(app.path().app_config_dir()?.join("story_history.json"));
+            app.manage(story.clone());
+
             let handle = app.handle().clone();
             
             // Spawn tokio task for auto_dialogue loop and hook init
@@ -50,18 +57,30 @@ pub fn run() {
                 let tokio_handle = tokio::runtime::Handle::current();
                 hook::init_hook(app_state, tokio_handle);
                 
+                let mut was_active = false;
                 loop {
-                    let (active, speed) = {
+                    let (active, story_mode, speed) = {
                         let state = handle.state::<AppState>();
                         let guard = state.0.lock().unwrap();
-                        (guard.auto_dialogue_active, guard.auto_dialogue_speed)
+                        let speed = if guard.story_mode { guard.story_speed } else { guard.auto_dialogue_speed };
+                        (guard.auto_dialogue_active, guard.story_mode, speed)
                     };
-                    
-                    if active {
+
+                    let mut wait = speed;
+                    if active && story_mode {
+                        if hook::is_genshin_active() {
+                            wait = story::step(&handle, &story, speed).await;
+                        }
+                    } else if active {
                         macros::loot_loop_step().await;
                     }
+                    if was_active && !(active && story_mode) {
+                        // Story run stopped (F4, the toggle, or a switch to plain Auto Dialogue).
+                        tauri::async_runtime::spawn(story::finish(handle.clone(), story.clone()));
+                    }
+                    was_active = active && story_mode;
                     
-                    sleep(Duration::from_millis(speed)).await;
+                    sleep(Duration::from_millis(wait)).await;
                 }
             });
 
@@ -72,6 +91,7 @@ pub fn run() {
             commands::stop_script,
             commands::check_status,
             commands::set_dialogue_speed,
+            commands::set_story_speed,
             commands::get_voice_settings,
             commands::save_voice_settings,
             commands::list_input_devices,
@@ -82,7 +102,15 @@ pub fn run() {
             commands::export_settings,
             commands::import_settings,
             updater::check_update,
+            story::set_story_settings,
+            story::story_history,
+            story::story_delete,
+            story::story_transcript,
+            story::story_merge,
+            artifacts::set_artifact_speed,
+            story::story_retry_pending,
             updater::install_update,
+            updater::is_portable,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

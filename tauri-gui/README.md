@@ -44,7 +44,23 @@ npm run tauri build
 
 The compiled installer will be located in `src-tauri/target/release/bundle/`.
 
+**Portable version:** `bundle/portable/*-portable.exe` is the whole app in one file — run it from any folder, no install. Settings are stored in `%APPDATA%\com.frost.genshinutility` either way, so the portable and installed copies share them. Keep "portable" in the file name: the app uses it to update by download instead of running the installer.
+
 Builds are signed for the in-app updater, so `tauri build` needs the private key: set `TAURI_SIGNING_PRIVATE_KEY` (key contents) or use `node scripts/build-release.mjs <version>` from the repo root, which reads `~/.tauri/genshin-utility.key`.
+
+## Story Mode
+
+A separate tab next to Auto Dialogue (only one of the two is on at a time; both use **F4** in-game to start and stop). It skips dialogue like Auto Dialogue, with its own delay (with *Longer lines get more time* on, the delay is for an average line: short lines go faster, long ones get up to 3x), and also:
+
+- reads the subtitles off the screen with Windows' built-in OCR (offline, no cost per line, keeps up at any delay),
+- asks an AI which option to pick when a choice menu appears (instead of always the first one),
+- writes a summary of the whole conversation when you stop, shown in the Story Mode tab with a Copy button.
+
+Every run is kept in **History** (newest first, with a title the AI gives it). If you play a story over several sittings, tick those sessions and press **Merge** for one summary of the whole thing, in play order. Sessions that share character and place names are marked as related: click *N related* to tick them all, or tick one to see its related sessions highlighted. History is included in settings export/import. *Summary* sets the length: **Very detailed** (default) writes up every part of a long story scene by scene (about 120 lines per part, so free AI tiers can handle it) under an overview, with Characters, Lore & reveals and Your choices; **Detailed** is one long recap; **Short** is a few paragraphs. *Summarize again* rewrites a saved summary with the current setting. Every line is also saved as "Speaker: what they said" (the speaker is the gold name above the subtitle): open a session and press **Dialogue** to read the whole conversation with your choices and sitting breaks, and search it by line or name.
+
+Nothing read is lost: the run in progress is written to disk as each line is read, so a crash, a closed app or a lost connection keeps it (it's recovered into History on the next start). Runs that couldn't be summarized (offline) are saved anyway and summarized automatically once the AI is reachable, or with *Retry summary*. If the game sends you back to a save point, press **Continue this story** on the session: your next runs are added to it, and lines you already read are skipped when you replay the scene (merging skips repeats too).
+
+The AI uses the API keys from **Voice Chat → API keys** (Groq, Gemini, OpenAI, Mistral or a custom OpenAI-compatible server). If a call fails, the first option is picked as before. Options are recognised by the speech-bubble icon beside them, and only while a subtitle is on screen. Unlike Auto Dialogue it only presses Space when the small gold diamond at the bottom centre shows a line is finished, so it never presses Space outside a conversation (no jumping), and open-world chatter (HUD showing) is recorded but never skipped with Space: in the open world it only presses F once to start talking to someone shown in a speech-bubble prompt (each NPC once per run, so finished chats are not restarted). It never shops: if a menu with *Purchase / Buy / Exchange / Craft / Confirm* is open it pauses until you close it, and options that open a shop or trade are never picked. Built for the 16:9 layout in borderless/windowed mode.
 
 ## Voice Chat (PS5 controller or keyboard & mouse)
 

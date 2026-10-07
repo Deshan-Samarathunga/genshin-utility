@@ -34,6 +34,10 @@
             <svg class="tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g class="ico-bubble"><path d="M4 5h16v11H9l-5 4z"/><path class="ico-play" d="M10 9l3 2-3 2z"/></g></svg>
             <span>Auto Dialogue</span><i class="tab-dot" data-for="auto_dialogue"></i>
           </button>
+          <button type="button" class="tab-btn" role="tab" data-tab="story">
+            <svg class="tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g class="ico-book"><path d="M4 5a2 2 0 0 1 2-2h13v15H6a2 2 0 0 0-2 2z"/><path d="M4 20a2 2 0 0 0 2 2h13v-4"/><path class="ico-spark" d="M12 7l1 2 2 1-2 1-1 2-1-2-2-1 2-1z"/></g></svg>
+            <span>Story Mode</span><i class="tab-dot" data-for="story_mode"></i>
+          </button>
           <button type="button" class="tab-btn" role="tab" data-tab="message">
             <svg class="tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g class="ico-plane"><path d="M21 3L10 14M21 3l-7 18-4-7-7-4z"/></g></svg>
             <span>Auto Message</span><i class="tab-dot" data-for="auto_message"></i>
@@ -61,7 +65,12 @@
           <div class="script-info">
             <h2>Batch Artifact Remover</h2>
             <p>Unequips all 5 artifacts from the current character in one press</p>
-            <p class="hotkey-hint"><strong>Hotkeys:</strong> Press <kbd>F7</kbd> to unequip artifacts, <kbd>Left</kbd> / <kbd>Right</kbd> to change characters.</p>
+            <p class="hotkey-hint"><strong>Hotkeys:</strong> <kbd>F7</kbd> this character · <kbd>Shift</kbd>+<kbd>F7</kbd> every character (<kbd>F7</kbd> stops) · <kbd>Left</kbd> / <kbd>Right</kbd> change characters.</p>
+            <div class="speed-control" style="margin-top: 10px; display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 0.85em; opacity: 0.9;">Every-character speed:</span>
+              <input type="range" id="artifact-speed" min="1" max="10" step="1" value="1" class="speed-slider" />
+              <span id="artifact-speed-value" style="font-size: 0.85em; min-width: 18px;">1</span>
+            </div>
           </div>
           <label class="switch">
             <input type="checkbox" id="toggle-remover" data-script="artifact_remover">
@@ -86,6 +95,56 @@
           </label>
         </div>
 
+
+        <div data-tab="story" role="tabpanel" class="script-card tab-panel">
+          <div class="script-info">
+            <h2>Story Mode</h2>
+            <p>Skips dialogue, lets AI pick the choices, and summarizes the story when you stop</p>
+            <p class="hotkey-hint"><strong>Hotkey:</strong> Press <kbd>F4</kbd> in-game to start/stop. Turns Auto Dialogue off.</p>
+            <div class="speed-control" style="margin-top: 10px; display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 0.85em; opacity: 0.9;">Delay (ms):</span>
+              <input type="number" id="story-speed" value="1000" min="50" step="50" style="width: 70px; padding: 4px; border-radius: 4px; border: 1px solid #444; background: #222; color: #fff;" />
+            </div>
+            <label class="story-length"><input type="checkbox" id="story-match-length" checked /> Longer lines get more time</label>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="toggle-story" data-script="story_mode">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <section data-tab="story" class="script-card tab-panel story-card" hidden>
+          <div class="voice-grid">
+            <h3 class="voice-section-title">AI</h3>
+            <div class="story-options">
+              <label>Provider
+                <select id="story-provider">
+                  <option value="groq">Groq</option>
+                  <option value="gemini">Google Gemini</option>
+                  <option value="openai">OpenAI</option>
+                  <option value="mistral">Mistral</option>
+                  <option value="custom">Custom</option>
+                </select>
+              </label>
+              <label>Model
+                <input type="text" id="story-model" spellcheck="false" autocomplete="off" />
+              </label>
+              <label>Summary
+                <select id="story-detail">
+                  <option value="full">Very detailed</option>
+                  <option value="detailed">Detailed</option>
+                  <option value="short">Short</option>
+                </select>
+              </label>
+            </div>
+            <p class="voice-note" id="story-status"></p>
+            <div class="story-history-head">
+              <h3 class="voice-section-title">History</h3>
+              <button type="button" class="btn" id="story-merge" disabled>Merge</button>
+            </div>
+            <p class="voice-note" id="story-merge-hint"></p>
+            <div class="story-history" id="story-history"></div>
+          </div>
+        </section>
 
         <!-- Script 4 -->
         <div data-tab="message" role="tabpanel" class="script-card tab-panel">
@@ -136,6 +195,13 @@
             </label>
             <label>Keyboard &amp; mouse mic <span class="voice-sub">used with the push-to-talk key — pick your headset</span>
               <select id="voice-mic-keys" class="voice-mic-select"></select>
+            </label>
+            <label>Mic sensitivity
+              <select id="voice-sensitivity">
+                <option value="normal">Normal</option>
+                <option value="high">High</option>
+                <option value="max">Max (whispers, quiet mics)</option>
+              </select>
             </label>
             <label>Language
               <select id="voice-language">

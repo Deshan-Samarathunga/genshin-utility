@@ -21,6 +21,9 @@ pub struct SettingsBackup {
     #[serde(default)]
     ui: serde_json::Value,
     voice: VoiceSettings,
+    /// Saved Story Mode sessions (missing in backups from before Story Mode).
+    #[serde(default)]
+    story_history: Vec<crate::story::history::Session>,
 }
 
 impl SettingsBackup {
@@ -53,6 +56,7 @@ pub async fn export(app: AppHandle, ui: serde_json::Value, exported_at: String, 
         open_with_genshin: crate::autostart::is_enabled(),
         ui,
         voice: app.state::<VoiceHandle>().settings(),
+        story_history: app.state::<crate::story::StoryHandle>().history(),
     };
     let json = serde_json::to_string_pretty(&backup).map_err(|e| e.to_string())?;
 
@@ -80,6 +84,9 @@ pub async fn import(app: AppHandle) -> Result<Option<serde_json::Value>, String>
     let backup = SettingsBackup::parse(&json)?;
 
     app.state::<VoiceHandle>().save_settings(backup.voice)?;
+    if !backup.story_history.is_empty() {
+        app.state::<crate::story::StoryHandle>().import_history(&app, backup.story_history);
+    }
     let flag = backup.open_with_genshin;
     let handle = app.clone();
     tauri::async_runtime::spawn_blocking(move || crate::autostart::set_enabled(&handle, flag))
@@ -101,10 +108,12 @@ mod tests {
             open_with_genshin: true,
             ui: serde_json::json!({ "dialogue_speed": 800 }),
             voice: VoiceSettings::default(),
+            story_history: vec![crate::story::history::Session { id: 7, title: "A".into(), ..Default::default() }],
         };
         let json = serde_json::to_string(&backup).unwrap();
         let parsed = SettingsBackup::parse(&json).unwrap();
         assert!(parsed.open_with_genshin);
+        assert_eq!(parsed.story_history[0].title, "A");
         assert_eq!(parsed.ui["dialogue_speed"], 800);
         assert_eq!(parsed.voice.engine, "local");
 
