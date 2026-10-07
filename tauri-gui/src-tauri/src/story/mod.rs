@@ -68,7 +68,7 @@ const CHOICE_CONTEXT: usize = 40;
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 #[serde(default)]
 pub struct StorySettings {
-    /// Chat provider id from `ai::PROVIDERS`; its key comes from the Voice Chat API keys table.
+    /// Chat provider id from `ai::PROVIDERS`; its key comes from the API Keys tab.
     pub provider: String,
     /// Empty = the provider's default model.
     pub model: String,
@@ -622,6 +622,11 @@ async fn ask_patiently(app: &AppHandle, settings: &StorySettings, system: &str, 
 /// Summarizes a transcript into (title, summary), as long as the "Summary" setting asks for.
 async fn summarize(app: &AppHandle, story: &StoryState, transcript: &[String]) -> Result<(String, String), String> {
     let settings = story.settings.lock().unwrap().clone();
+    let model = match settings.model.trim() {
+        "" => ai::default_model(&settings.provider).to_string(),
+        m => m.to_string(),
+    };
+    emit(app, "summarizing", &format!("Summarizing with {model}…"), 0);
     match settings.detail.as_str() {
         "short" => {
             let answer = ask_patiently(app, &settings, &summary_prompt(SHORT_PROMPT), &transcript.join("\n")).await?;
@@ -641,7 +646,7 @@ async fn summarize(app: &AppHandle, story: &StoryState, transcript: &[String]) -
             }
             let mut notes: Vec<String> = Vec::new();
             for (i, part) in parts.iter().enumerate() {
-                emit(app, "summarizing", &format!("Summarizing part {} of {}…", i + 1, parts.len()), 0);
+                emit(app, "summarizing", &format!("Summarizing part {} of {} with {model}…", i + 1, parts.len()), 0);
                 let before = notes.last().map(|n| {
                     let tail: String = n.chars().rev().take(800).collect::<Vec<_>>().into_iter().rev().collect();
                     format!("End of the notes for the previous part (for context only):\n{tail}\n\n")

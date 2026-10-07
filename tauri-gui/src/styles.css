@@ -1572,3 +1572,24 @@ kbd {
   accent-color: var(--primary);
   cursor: pointer;
 }
+
+/* API Keys tab */
+.keys-card .voice-grid {
+  flex: 1;
+  margin-top: 0;
+}
+
+.keys-card h2 {
+  margin: 0;
+}
+
+/* Key: turns a little on hover. */
+.ico-key {
+  transform-box: fill-box;
+  transform-origin: 30% 70%;
+  transition: transform 0.3s ease;
+}
+
+.tab-btn:hover .ico-key {
+  transform: rotate(-20deg);
+}

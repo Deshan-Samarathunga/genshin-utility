@@ -26,7 +26,7 @@ pub async fn chat(
 ) -> Result<String, String> {
     let key = config.api_key.trim();
     if key.is_empty() {
-        return Err(format!("No API key for {provider} — add it in Voice Chat → API keys"));
+        return Err(format!("No API key for {provider} — add it in the API Keys tab"));
     }
     let base = config.base_url.trim().trim_end_matches('/');
     let model = if model.trim().is_empty() { default_model(provider) } else { model.trim() };

@@ -92,7 +92,10 @@ function selectTab(tab) {
     panel.hidden = panel.dataset.tab !== tab;
   });
   localStorage.setItem(TAB_KEY, tab);
-  showVoiceSection(tab === 'voice' ? localStorage.getItem(VOICE_SECTION_KEY) || 'controls' : null);
+  // A saved sub-tab that no longer exists (API keys moved to its own tab) falls back to the first.
+  const saved = localStorage.getItem(VOICE_SECTION_KEY);
+  const known = document.querySelector(`.sub-tab-btn[data-voice-section="${saved}"]`);
+  showVoiceSection(tab === 'voice' ? (known ? saved : 'controls') : null);
 }
 
 const VOICE_SECTION_KEY = 'genshin-utility.voice-section';
@@ -407,10 +410,34 @@ function setStoryContinue(id) {
   pushStorySettings();
 }
 
+// Suggestions in the Model box; any model the provider offers can be typed in.
+const STORY_MODEL_OPTIONS = {
+  groq: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
+  gemini: ['gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-3.1-pro-preview'],
+  openai: ['gpt-4o-mini', 'gpt-4o'],
+  mistral: ['mistral-small-latest', 'mistral-large-latest'],
+  custom: [],
+};
+let storyProviderShown = null;
+
+// Keeps the Model box showing the model that's really used: switching provider swaps in the new
+// provider's default unless a model of your own was typed.
+function syncStoryModel() {
+  const provider = document.getElementById('story-provider').value;
+  const model = document.getElementById('story-model');
+  const previousDefault = STORY_MODELS[storyProviderShown] || '';
+  if (!model.value.trim() || (storyProviderShown && storyProviderShown !== provider && model.value.trim() === previousDefault)) {
+    model.value = STORY_MODELS[provider] || '';
+  }
+  storyProviderShown = provider;
+  const list = document.getElementById('story-model-options');
+  list.replaceChildren(...(STORY_MODEL_OPTIONS[provider] || []).map((m) => new Option(m, m)));
+}
+
 function pushStorySettings() {
   const provider = document.getElementById('story-provider');
   const model = document.getElementById('story-model');
-  model.placeholder = STORY_MODELS[provider.value] || '';
+  syncStoryModel();
   invoke('set_story_settings', {
     settings: {
       provider: provider.value,
@@ -703,6 +730,7 @@ async function mergeStories(ids, button) {
 }
 
 function initStory() {
+  document.getElementById('story-model').addEventListener('input', saveUiSettings);
   ['story-provider', 'story-model', 'story-match-length', 'story-detail'].forEach((id) => {
     document.getElementById(id).addEventListener('change', pushStorySettings);
   });
@@ -1068,7 +1096,7 @@ function renderProviderTable() {
     const use = document.createElement('button');
     use.type = 'button';
     use.className = 'voice-use';
-    use.textContent = 'Use';
+    use.textContent = 'Use for voice';
     use.addEventListener('click', () => useProvider(id));
     actionCell.append(use);
     row.append(actionCell);
@@ -1088,7 +1116,7 @@ function updateProviderTable() {
     row.querySelector('.voice-key-status').textContent = config.api_key ? 'Saved' : 'No key';
     row.querySelector('.voice-key-status').classList.toggle('saved', Boolean(config.api_key));
     const use = row.querySelector('.voice-use');
-    use.textContent = active ? 'In use' : 'Use';
+    use.textContent = active ? 'Voice Chat' : 'Use for voice';
     use.disabled = active;
     row.querySelectorAll('input[data-field]').forEach((input) => {
       if (!input.value && config[input.dataset.field]) input.value = config[input.dataset.field];

@@ -49,10 +49,13 @@
           <div class="sub-tabs" id="voice-subtabs" hidden>
             <button type="button" class="sub-tab-btn" data-voice-section="controls">Controls &amp; mics</button>
             <button type="button" class="sub-tab-btn" data-voice-section="engine">Speech engine</button>
-            <button type="button" class="sub-tab-btn" data-voice-section="keys">API keys</button>
             <button type="button" class="sub-tab-btn" data-voice-section="words">Words</button>
           </div>
 
+          <button type="button" class="tab-btn" role="tab" data-tab="keys">
+            <svg class="tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g class="ico-key"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2L20 3M16 7l3 3M14 9l2 2"/></g></svg>
+            <span>API Keys</span>
+          </button>
           <button type="button" class="tab-btn tab-settings" role="tab" data-tab="settings">
             <svg class="tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g class="ico-cog"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></g></svg>
             <span>Settings</span>
@@ -126,7 +129,8 @@
                 </select>
               </label>
               <label>Model
-                <input type="text" id="story-model" spellcheck="false" autocomplete="off" />
+                <input type="text" id="story-model" list="story-model-options" spellcheck="false" autocomplete="off" />
+                <datalist id="story-model-options"></datalist>
               </label>
               <label>Summary
                 <select id="story-detail">
@@ -143,6 +147,23 @@
             </div>
             <p class="voice-note" id="story-merge-hint"></p>
             <div class="story-history" id="story-history"></div>
+          </div>
+        </section>
+
+        <section data-tab="keys" role="tabpanel" class="script-card tab-panel keys-card" hidden>
+          <div class="voice-grid">
+            <h2>API Keys</h2>
+            <p class="voice-note">Used by Voice Chat and Story Mode</p>
+            <div class="voice-keys">
+              <div class="voice-table-wrap">
+                <table class="voice-table">
+                  <thead>
+                    <tr><th>Provider</th><th>API key</th><th>Voice model / Base URL</th><th></th></tr>
+                  </thead>
+                  <tbody id="voice-provider-rows"></tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -245,22 +266,6 @@
             </div>
             <div class="voice-cloud">
               <p class="voice-note" id="voice-provider-hint"></p>
-            </div>
-          </div>
-        </section>
-        <section class="script-card voice-section" data-voice-section="keys" hidden>
-          <div class="voice-grid">
-            <h3 class="voice-section-title">API keys</h3>
-            <div class="voice-keys">
-              <span class="voice-subhead">API keys &amp; endpoints</span>
-              <div class="voice-table-wrap">
-                <table class="voice-table">
-                  <thead>
-                    <tr><th>Provider</th><th>API key</th><th>Model / Base URL</th><th></th></tr>
-                  </thead>
-                  <tbody id="voice-provider-rows"></tbody>
-                </table>
-              </div>
             </div>
           </div>
         </section>
