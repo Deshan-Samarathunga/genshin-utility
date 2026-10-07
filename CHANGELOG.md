@@ -1,8 +1,8 @@
-## [1.5.0](https://github.com/[secure]/genshin-utility/compare/v1.4.0...v1.5.0) (2026-10-07)
+## [1.5.0](https://github.com/Deshan-Samarathunga/genshin-utility/compare/v1.4.0...v1.5.0) (2026-10-07)
 
 ### Features
 
-* separate tab for API keys and a working story model box ([2ad5bd6](https://github.com/[secure]/genshin-utility/commit/2ad5bd67a414e48d5244879a829e6886a2c452cb))
+* separate tab for API keys and a working story model box ([2ad5bd6](https://github.com/Deshan-Samarathunga/genshin-utility/commit/2ad5bd67a414e48d5244879a829e6886a2c452cb))
 
 ## [1.4.0](https://github.com/Deshan-Samarathunga/genshin-utility/compare/v1.3.0...v1.4.0) (2026-10-07)
 
