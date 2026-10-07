@@ -5,7 +5,7 @@
 // ~/.tauri/genshin-utility.key. Keep that file private and backed up; without it, installed copies
 // can't verify (and won't accept) new versions.
 import { execSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
@@ -57,3 +57,11 @@ const manifest = {
 };
 writeFileSync(join(BUNDLE, 'latest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 console.log(`Wrote ${BUNDLE}/latest.json`);
+
+// Portable copy: the app is a single exe (the page is built in, settings live in %APPDATA%).
+// "portable" in the file name tells the app to update by download instead of running the installer.
+const portableDir = join(BUNDLE, 'portable');
+mkdirSync(portableDir, { recursive: true });
+const portable = join(portableDir, `Genshin Impact Utility_${version}_x64-portable.exe`);
+copyFileSync('tauri-gui/src-tauri/target/release/Genshin Impact Utility.exe', portable);
+console.log(`Wrote ${portable}`);

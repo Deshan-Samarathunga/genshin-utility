@@ -65,3 +65,13 @@ pub async fn install_update(app: AppHandle, pending: State<'_, PendingUpdate>) -
     update.install(bytes).map_err(|e| format!("Couldn't start the installer: {e}"))?;
     app.restart();
 }
+
+/// Portable copies (file name contains "portable") update by downloading the new portable exe;
+/// running the installer would put a second, installed copy on the PC.
+#[tauri::command]
+pub fn is_portable() -> bool {
+    std::env::current_exe()
+        .ok()
+        .and_then(|p| p.file_name().map(|n| n.to_string_lossy().to_lowercase().contains("portable")))
+        .unwrap_or(false)
+}

@@ -33,6 +33,7 @@
           { "path": "tauri-gui/src-tauri/target/release/bundle/msi/*.msi", "label": "Windows installer (MSI)" },
           { "path": "tauri-gui/src-tauri/target/release/bundle/nsis/*-setup.exe.sig", "label": "Installer signature (setup.exe)" },
           { "path": "tauri-gui/src-tauri/target/release/bundle/msi/*.msi.sig", "label": "Installer signature (MSI)" },
+          { "path": "tauri-gui/src-tauri/target/release/bundle/portable/*-portable.exe", "label": "Portable (no install)" },
           { "path": "tauri-gui/src-tauri/target/release/bundle/latest.json", "label": "Update manifest (latest.json)" }
         ]
       }
