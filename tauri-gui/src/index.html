@@ -68,7 +68,7 @@
           <div class="script-info">
             <h2>Batch Artifact Remover</h2>
             <p>Unequips all 5 artifacts from the current character in one press</p>
-            <p class="hotkey-hint"><strong>Hotkeys:</strong> <kbd>F7</kbd> this character · <kbd>Shift</kbd>+<kbd>F7</kbd> every character (<kbd>F7</kbd> stops) · <kbd>Left</kbd> / <kbd>Right</kbd> change characters.</p>
+            <p class="hotkey-hint"><strong>Hotkeys:</strong> <kbd data-hotkey="artifacts_one">F7</kbd> this character · <kbd data-hotkey="artifacts_all">Shift+F7</kbd> every character (either stops it) · <kbd data-hotkey="prev_character">Left</kbd> / <kbd data-hotkey="next_character">Right</kbd> change characters.</p>
             <div class="speed-control" style="margin-top: 10px; display: flex; align-items: center; gap: 8px;">
               <span style="font-size: 0.85em; opacity: 0.9;">Every-character speed:</span>
               <input type="range" id="artifact-speed" min="1" max="10" step="1" value="1" class="speed-slider" />
@@ -86,7 +86,7 @@
           <div class="script-info">
             <h2>Auto Dialogue</h2>
             <p>Automatically skips long story dialogues</p>
-            <p class="hotkey-hint"><strong>Hotkey:</strong> Press <kbd>F4</kbd> in-game to start/stop.</p>
+            <p class="hotkey-hint"><strong>Hotkey:</strong> Press <kbd data-hotkey="dialogue">F4</kbd> in-game to start/stop.</p>
             <div class="speed-control" style="margin-top: 10px; display: flex; align-items: center; gap: 8px;">
               <span style="font-size: 0.85em; opacity: 0.9;">Delay (ms):</span>
               <input type="number" id="dialogue-speed" value="1000" min="50" step="50" style="width: 70px; padding: 4px; border-radius: 4px; border: 1px solid #444; background: #222; color: #fff;" />
@@ -103,7 +103,7 @@
           <div class="script-info">
             <h2>Story Mode</h2>
             <p>Skips dialogue, lets AI pick the choices, and summarizes the story when you stop</p>
-            <p class="hotkey-hint"><strong>Hotkey:</strong> Press <kbd>F4</kbd> in-game to start/stop. Turns Auto Dialogue off.</p>
+            <p class="hotkey-hint"><strong>Hotkey:</strong> Press <kbd data-hotkey="dialogue">F4</kbd> in-game to start/stop. Turns Auto Dialogue off.</p>
             <div class="speed-control" style="margin-top: 10px; display: flex; align-items: center; gap: 8px;">
               <span style="font-size: 0.85em; opacity: 0.9;">Delay (ms):</span>
               <input type="number" id="story-speed" value="1000" min="50" step="50" style="width: 70px; padding: 4px; border-radius: 4px; border: 1px solid #444; background: #222; color: #fff;" />
@@ -158,7 +158,7 @@
               <div class="voice-table-wrap">
                 <table class="voice-table">
                   <thead>
-                    <tr><th>Provider</th><th>API key</th><th>Voice model / Base URL</th><th></th></tr>
+                    <tr><th>Provider</th><th>API key</th><th>Base URL</th></tr>
                   </thead>
                   <tbody id="voice-provider-rows"></tbody>
                 </table>
@@ -172,7 +172,7 @@
           <div class="script-info">
             <h2>Auto Message</h2>
             <p>Send a message to multiple friends automatically</p>
-            <p class="hotkey-hint"><strong>Hotkey:</strong> Press <kbd>F8</kbd> to start messaging.</p>
+            <p class="hotkey-hint"><strong>Hotkey:</strong> Press <kbd data-hotkey="auto_message">F8</kbd> to start messaging.</p>
             <div class="auto-message-inputs">
               <input type="text" id="auto-message-text" placeholder="Message text..." />
               <input type="number" id="auto-message-count" placeholder="Loops" min="1" value="1" />
@@ -265,6 +265,10 @@
               <p class="voice-note" id="voice-engine-status"></p>
             </div>
             <div class="voice-cloud">
+              <label>Model
+                <input type="text" id="voice-cloud-model" list="voice-cloud-model-options" spellcheck="false" autocomplete="off" />
+                <datalist id="voice-cloud-model-options"></datalist>
+              </label>
               <p class="voice-note" id="voice-provider-hint"></p>
             </div>
           </div>
@@ -307,6 +311,17 @@
               <input type="checkbox" id="toggle-auto-open">
               <span class="slider"></span>
             </label>
+          </div>
+
+          <h3 class="settings-group">Hotkeys</h3>
+          <div id="hotkey-rows"></div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-label">Click a key, then press the new keys (Esc cancels)</div>
+            </div>
+            <div class="settings-actions">
+              <button type="button" class="btn" id="hotkeys-reset">Reset to defaults</button>
+            </div>
           </div>
 
           <h3 class="settings-group">Backup</h3>

@@ -107,67 +107,64 @@ unsafe extern "system" fn keyboard_hook_proc(n_code: i32, w_param: WPARAM, l_par
     }
 
     if n_code >= 0 && (w_param.0 as u32 == WM_KEYDOWN || w_param.0 as u32 == WM_SYSKEYDOWN) {
-        let kb_struct = *(l_param.0 as *const KBDLLHOOKSTRUCT);
-        let vk_code = kb_struct.vkCode;
+        let vk_code = (*(l_param.0 as *const KBDLLHOOKSTRUCT)).vkCode;
+        // Hotkeys need their exact modifiers, so Alt+F4, Win+Left and friends still reach Windows.
+        use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_CONTROL, VK_LWIN, VK_MENU, VK_RWIN, VK_SHIFT};
+        let held = |vk: windows::Win32::UI::Input::KeyboardAndMouse::VIRTUAL_KEY| GetAsyncKeyState(vk.0 as i32) < 0;
+        let pressed = crate::hotkeys::Hotkey {
+            vk: vk_code,
+            ctrl: held(VK_CONTROL),
+            alt: held(VK_MENU),
+            shift: held(VK_SHIFT),
+        };
+        let action = if held(VK_LWIN) || held(VK_RWIN) { None } else { crate::hotkeys::action_for(pressed) };
 
-        // F4 = 115, F7 = 118, F8 = 119
-        // Left = 37, Right = 39
+        if let Some(action) = action.filter(|_| is_genshin_active()) {
+            use crate::hotkeys::Action;
+            let guard = APP_STATE_REF.read().unwrap();
+            if let Some((state, handle)) = guard.as_ref() {
+                let mut handled = false;
+                let mut macro_state = state.0.lock().unwrap();
 
-        if vk_code == 115 || vk_code == 118 || vk_code == 119 || vk_code == 37 || vk_code == 39 {
-            let is_genshin = is_genshin_active();
-            println!("Hotkey pressed: {}, Genshin active: {}", vk_code, is_genshin);
-            
-            if is_genshin {
-                let guard = APP_STATE_REF.read().unwrap();
-                if let Some((state, handle)) = guard.as_ref() {
-                    let mut handled = false;
-
-                    let mut macro_state = state.0.lock().unwrap();
-
-                    if vk_code == 115 && (macro_state.auto_dialogue || macro_state.story_mode) {
-                        println!("F4 triggered auto_dialogue");
+                match action {
+                    Action::Dialogue if macro_state.auto_dialogue || macro_state.story_mode => {
                         macro_state.auto_dialogue_active = !macro_state.auto_dialogue_active;
                         handled = true;
-                    } else if vk_code == 118 && macro_state.artifact_remover {
-                        let shift = windows::Win32::UI::Input::KeyboardAndMouse::GetAsyncKeyState(
-                            windows::Win32::UI::Input::KeyboardAndMouse::VK_SHIFT.0 as i32,
-                        ) < 0;
+                    }
+                    Action::ArtifactsOne | Action::ArtifactsAll if macro_state.artifact_remover => {
                         if crate::artifacts::running() {
-                            // F7 / Shift+F7 while every character is being done: stop.
+                            // Either artifact key while every character is being done: stop.
                             crate::artifacts::cancel();
-                        } else if shift {
+                        } else if action == Action::ArtifactsAll {
                             handle.spawn(crate::artifacts::remove_all());
                         } else {
-                            println!("F7 triggered artifact_remover");
                             handle.spawn(async {
                                 crate::macros::artifact_remover_run();
                             });
                         }
                         handled = true;
-                    } else if vk_code == 37 && macro_state.artifact_remover {
-                        println!("Left triggered artifact_remover_prev");
+                    }
+                    Action::PrevCharacter if macro_state.artifact_remover => {
                         handle.spawn(async {
                             crate::macros::artifact_remover_prev();
                         });
                         handled = true;
-                    } else if vk_code == 39 && macro_state.artifact_remover {
-                        println!("Right triggered artifact_remover_next");
+                    }
+                    Action::NextCharacter if macro_state.artifact_remover => {
                         handle.spawn(async {
                             crate::macros::artifact_remover_next();
                         });
                         handled = true;
-                    } else if vk_code == 119 && macro_state.auto_message {
+                    }
+                    Action::AutoMessage if macro_state.auto_message => {
                         if let Some(last_time) = macro_state.last_toggle_time {
                             if last_time.elapsed().as_millis() < 300 {
                                 return LRESULT(1); // Ignore auto-repeat
                             }
                         }
                         macro_state.last_toggle_time = Some(std::time::Instant::now());
-                        
-                        println!("F8 triggered auto_message");
-                        
                         macro_state.auto_message_active = !macro_state.auto_message_active;
-                        
+
                         if macro_state.auto_message_active {
                             let text = macro_state.auto_message_text.clone();
                             let count = macro_state.auto_message_count;
@@ -178,10 +175,11 @@ unsafe extern "system" fn keyboard_hook_proc(n_code: i32, w_param: WPARAM, l_par
                         }
                         handled = true;
                     }
+                    _ => {}
+                }
 
-                    if handled {
-                        return LRESULT(1); // Block the keypress
-                    }
+                if handled {
+                    return LRESULT(1); // Block the keypress
                 }
             }
         }

@@ -492,14 +492,6 @@ input:active + .slider {
   border-bottom: none;
 }
 
-.voice-table tr.active td {
-  background-color: rgba(16, 185, 129, 0.08);
-}
-
-.voice-table tr.active td:first-child {
-  box-shadow: inset 3px 0 0 var(--primary);
-}
-
 .voice-table input {
   width: 100%;
   min-width: 90px;
@@ -570,8 +562,7 @@ input:active + .slider {
   color: var(--body);
 }
 
-.voice-reveal,
-.voice-use {
+.voice-reveal {
   background-color: var(--canvas);
   border: 1px solid var(--hairline);
   color: var(--ink);
@@ -583,16 +574,8 @@ input:active + .slider {
   white-space: nowrap;
 }
 
-.voice-reveal:hover,
-.voice-use:hover:not(:disabled) {
+.voice-reveal:hover {
   border-color: var(--primary);
-}
-
-.voice-use:disabled {
-  color: var(--primary);
-  border-color: transparent;
-  background: transparent;
-  cursor: default;
 }
 
 /* Header line-art gears (Meropide machinery) */
@@ -1592,4 +1575,39 @@ kbd {
 
 .tab-btn:hover .ico-key {
   transform: rotate(-20deg);
+}
+
+/* Hotkey buttons in Settings */
+.hotkey-btn {
+  min-width: 120px;
+  font-family: var(--ui-font);
+  font-weight: 600;
+}
+
+.hotkey-btn.listening {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* Expand / collapse arrow on history sessions */
+.story-chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--body);
+  cursor: pointer;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.story-chevron:hover {
+  color: var(--ink);
+}
+
+.story-chevron.open {
+  transform: rotate(180deg);
 }

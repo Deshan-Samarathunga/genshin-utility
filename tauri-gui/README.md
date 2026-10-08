@@ -50,7 +50,7 @@ Builds are signed for the in-app updater, so `tauri build` needs the private key
 
 ## Story Mode
 
-A separate tab next to Auto Dialogue (only one of the two is on at a time; both use **F4** in-game to start and stop). It skips dialogue like Auto Dialogue, with its own delay (with *Longer lines get more time* on, the delay is for an average line: short lines go faster, long ones get up to 3x), and also:
+A separate tab next to Auto Dialogue (only one of the two is on at a time; both use **F4** in-game to start and stop by default). It skips dialogue like Auto Dialogue, with its own delay (with *Longer lines get more time* on, the delay is for an average line: short lines go faster, long ones get up to 3x), and also:
 
 - reads the subtitles off the screen with Windows' built-in OCR (offline, no cost per line, keeps up at any delay),
 - asks an AI which option to pick when a choice menu appears (instead of always the first one),
@@ -60,7 +60,7 @@ Every run is kept in **History** (newest first, with a title the AI gives it). I
 
 Nothing read is lost: the run in progress is written to disk as each line is read, so a crash, a closed app or a lost connection keeps it (it's recovered into History on the next start). Runs that couldn't be summarized (offline) are saved anyway and summarized automatically once the AI is reachable, or with *Retry summary*. If the game sends you back to a save point, press **Continue this story** on the session: your next runs are added to it, and lines you already read are skipped when you replay the scene (merging skips repeats too).
 
-The AI uses the keys from the **API Keys** tab, with the model set in Story Mode (type any model the provider offers) (Groq, Gemini, OpenAI, Mistral or a custom OpenAI-compatible server). If a call fails, the first option is picked as before. Options are recognised by the speech-bubble icon beside them, and only while a subtitle is on screen. Unlike Auto Dialogue it only presses Space when the small gold diamond at the bottom centre shows a line is finished, so it never presses Space outside a conversation (no jumping), and open-world chatter (HUD showing) is recorded but never skipped with Space: in the open world it only presses F once to start talking to someone shown in a speech-bubble prompt (each NPC once per run, so finished chats are not restarted). It never shops: if a menu with *Purchase / Buy / Exchange / Craft / Confirm* is open it pauses until you close it, and options that open a shop or trade are never picked. Built for the 16:9 layout in borderless/windowed mode.
+The AI uses the key and base URL from the **API Keys** tab, with the provider and model set in Story Mode (type any model the provider offers) (Groq, Gemini, OpenAI, Mistral or a custom OpenAI-compatible server). If a call fails, the first option is picked as before. Options are recognised by the speech-bubble icon beside them, and only while a subtitle is on screen. Unlike Auto Dialogue it only presses Space when the small gold diamond at the bottom centre shows a line is finished, so it never presses Space outside a conversation (no jumping), and open-world chatter (HUD showing) is recorded but never skipped with Space: in the open world it only presses F once to start talking to someone shown in a speech-bubble prompt (each NPC once per run, so finished chats are not restarted). It never shops: if a menu with *Purchase / Buy / Exchange / Craft / Confirm* is open it pauses until you close it, and options that open a shop or trade are never picked. Built for the 16:9 layout in borderless/windowed mode.
 
 ## Voice Chat (PS5 controller or keyboard & mouse)
 
@@ -109,3 +109,7 @@ Settings → About checks the latest release's `latest.json` and installs the ne
 
 - Local key: `~/.tauri/genshin-utility.key`. **Back it up and never commit it** — if it's lost, installed copies can't update to new versions and everyone has to reinstall manually.
 - CI: add the key file's contents as the repository secret `TAURI_SIGNING_PRIVATE_KEY`.
+
+## Hotkeys
+
+Every in-game hotkey can be changed in **Settings → Hotkeys**: click a key and press the new combination (Esc cancels). A hotkey only fires with exactly its modifiers, so F4 for Story Mode leaves Alt+F4 free to close the game, and two features can't share the same keys. Defaults: F4 Auto Dialogue / Story Mode, F7 / Shift+F7 artifacts (this / every character), Left / Right change characters, F8 Auto Message.

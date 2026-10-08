@@ -3,6 +3,7 @@ pub mod autostart;
 pub mod backup;
 pub mod commands;
 pub mod hook;
+pub mod hotkeys;
 pub mod macros;
 pub mod state;
 pub mod story;
@@ -108,6 +109,8 @@ pub fn run() {
             story::story_transcript,
             story::story_merge,
             artifacts::set_artifact_speed,
+            hotkeys::set_hotkeys,
+            hotkeys::default_hotkeys,
             story::story_retry_pending,
             updater::install_update,
             updater::is_portable,

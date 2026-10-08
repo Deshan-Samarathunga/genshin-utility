@@ -78,6 +78,124 @@ async function handleToggle(event) {
   if (otherBox) updateToggleState(otherBox);
 }
 
+// ── Hotkeys (assignable in Settings; saved with the page settings and in backups) ──────────
+
+const HOTKEY_LABELS = {
+  dialogue: 'Auto Dialogue / Story Mode start & stop',
+  artifacts_one: 'Remove artifacts: this character',
+  artifacts_all: 'Remove artifacts: every character',
+  prev_character: 'Previous character',
+  next_character: 'Next character',
+  auto_message: 'Auto Message start',
+};
+let hotkeys = {};
+let defaultHotkeys = {};
+
+const KEY_NAMES = {
+  8: 'Backspace', 9: 'Tab', 13: 'Enter', 19: 'Pause', 20: 'Caps Lock', 27: 'Esc', 32: 'Space',
+  33: 'Page Up', 34: 'Page Down', 35: 'End', 36: 'Home', 37: 'Left', 38: 'Up', 39: 'Right', 40: 'Down',
+  45: 'Insert', 46: 'Delete', 106: 'Num *', 107: 'Num +', 109: 'Num -', 110: 'Num .', 111: 'Num /',
+  186: ';', 187: '=', 188: ',', 189: '-', 190: '.', 191: '/', 192: '`', 219: '[', 220: '\\', 221: ']', 222: "'",
+};
+
+function keyName(vk) {
+  if (vk >= 112 && vk <= 135) return `F${vk - 111}`;
+  if ((vk >= 48 && vk <= 57) || (vk >= 65 && vk <= 90)) return String.fromCharCode(vk);
+  if (vk >= 96 && vk <= 105) return `Num ${vk - 96}`;
+  return KEY_NAMES[vk] || `Key ${vk}`;
+}
+
+function hotkeyText(h) {
+  if (!h) return '—';
+  return [h.ctrl && 'Ctrl', h.alt && 'Alt', h.shift && 'Shift', keyName(h.vk)].filter(Boolean).join('+');
+}
+
+function renderHotkeys() {
+  document.querySelectorAll('[data-hotkey]').forEach((el) => {
+    el.textContent = hotkeyText(hotkeys[el.dataset.hotkey]);
+  });
+  document.querySelectorAll('.hotkey-btn').forEach((btn) => {
+    if (!btn.classList.contains('listening')) btn.textContent = hotkeyText(hotkeys[btn.dataset.action]);
+  });
+}
+
+async function applyHotkeys(next) {
+  await invoke('set_hotkeys', { bindings: next });
+  hotkeys = next;
+  renderHotkeys();
+  saveUiSettings();
+}
+
+// Waits for the next key combination pressed in the app window.
+function captureHotkey(btn) {
+  document.querySelectorAll('.hotkey-btn.listening').forEach((b) => b.classList.remove('listening'));
+  btn.classList.add('listening');
+  btn.textContent = 'Press keys…';
+  const onKey = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if ([16, 17, 18, 91, 92, 93].includes(e.keyCode)) return; // modifier alone: keep waiting
+    window.removeEventListener('keydown', onKey, true);
+    btn.classList.remove('listening');
+    if (e.keyCode === 27 && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+      renderHotkeys();
+      return;
+    }
+    const next = { ...hotkeys, [btn.dataset.action]: { vk: e.keyCode, ctrl: e.ctrlKey, alt: e.altKey, shift: e.shiftKey } };
+    try {
+      await applyHotkeys(next);
+      setStatus(`${HOTKEY_LABELS[btn.dataset.action]}: ${hotkeyText(next[btn.dataset.action])}`);
+    } catch (error) {
+      setStatus(`Error: ${error}`);
+      renderHotkeys();
+    }
+  };
+  window.addEventListener('keydown', onKey, true);
+}
+
+async function initHotkeys() {
+  defaultHotkeys = await invoke('default_hotkeys').catch(() => ({}));
+  let saved = {};
+  try {
+    saved = JSON.parse(localStorage.getItem(UI_SETTINGS_KEY) || '{}').hotkeys || {};
+  } catch {
+    saved = {};
+  }
+  hotkeys = { ...defaultHotkeys, ...saved };
+  try {
+    await invoke('set_hotkeys', { bindings: hotkeys });
+  } catch (error) {
+    // Saved keys clash (e.g. after an update): fall back to the defaults.
+    hotkeys = { ...defaultHotkeys };
+    setStatus(`Hotkeys reset: ${error}`);
+  }
+
+  const rows = document.getElementById('hotkey-rows');
+  for (const [action, label] of Object.entries(HOTKEY_LABELS)) {
+    const row = document.createElement('div');
+    row.className = 'settings-row';
+    const name = document.createElement('div');
+    name.className = 'settings-label';
+    name.textContent = label;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn hotkey-btn';
+    btn.dataset.action = action;
+    btn.addEventListener('click', () => captureHotkey(btn));
+    row.append(name, btn);
+    rows.append(row);
+  }
+  document.getElementById('hotkeys-reset').addEventListener('click', async () => {
+    try {
+      await applyHotkeys({ ...defaultHotkeys });
+      setStatus('Hotkeys reset to defaults');
+    } catch (error) {
+      setStatus(`Error: ${error}`);
+    }
+  });
+  renderHotkeys();
+}
+
 // ── Sidebar tabs ─────────────────────────────────────────────
 
 const TAB_KEY = 'genshin-utility.tab';
@@ -137,7 +255,7 @@ const UI_FIELDS = {
 };
 
 function readUiSettings() {
-  const ui = {};
+  const ui = { hotkeys };
   for (const [key, id] of Object.entries(UI_FIELDS)) {
     const input = document.getElementById(id);
     if (!input) continue;
@@ -385,6 +503,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Progress of Shift+F7 (artifacts from every character).
   listen('artifact-status', ({ payload }) => setStatus(payload));
 
+  initHotkeys();
   initVoiceChat();
   initStory();
 });
@@ -679,6 +798,11 @@ function renderStoryHistory() {
     meta.textContent = [storyDate(session.id), `${session.lines} lines`, session.parts > 1 ? `${session.parts} sessions` : '']
       .filter(Boolean)
       .join(' · ');
+    const chevron = storyButton('', 'story-chevron', () => title.click());
+    chevron.setAttribute('aria-label', storyOpen.has(session.id) ? 'Collapse' : 'Expand');
+    chevron.innerHTML =
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 9l7 7 7-7"/></svg>';
+    chevron.classList.toggle('open', storyOpen.has(session.id));
     head.append(tick, title, meta);
     if (storyContinue === session.id) {
       const chip = document.createElement('span');
@@ -699,6 +823,7 @@ function renderStoryHistory() {
       pick.title = 'Tick this session and the ones that look like the same story';
       head.append(pick);
     }
+    head.append(chevron);
     item.append(head);
     if (storyOpen.has(session.id)) item.append(storyItemBody(session));
     list.append(item);
@@ -848,6 +973,29 @@ const MODEL_LABELS = {
 
 let voiceSettings = null;
 
+// Suggestions in the speech Model box; any model the provider offers can be typed in.
+const VOICE_MODEL_OPTIONS = {
+  groq: ['whisper-large-v3', 'whisper-large-v3-turbo'],
+  gemini: ['gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-3.1-pro-preview'],
+  deepgram: ['nova-3', 'nova-2'],
+  elevenlabs: ['scribe_v2', 'scribe_v1'],
+  mistral: ['voxtral-mini-latest', 'voxtral-small-latest'],
+  openai: ['gpt-4o-transcribe', 'gpt-4o-mini-transcribe', 'whisper-1'],
+  custom: ['whisper-1'],
+};
+// Which provider the speech Model box is showing.
+let voiceModelFor = null;
+
+function showVoiceModel() {
+  const engine = voiceEl('voice-engine').value;
+  voiceModelFor = engine;
+  if (engine === 'local') return;
+  voiceEl('voice-cloud-model').value = voiceSettings.cloud[engine]?.model || '';
+  voiceEl('voice-cloud-model-options').replaceChildren(
+    ...(VOICE_MODEL_OPTIONS[engine] || []).map((m) => new Option(m, m)),
+  );
+}
+
 function voiceEl(id) {
   return document.getElementById(id);
 }
@@ -865,6 +1013,10 @@ function readVoiceForm() {
     const id = input.dataset.provider;
     next.cloud[id] = { ...next.cloud[id], [input.dataset.field]: input.value.trim() };
   });
+  // The Model box belongs to the provider it was filled for (the engine may have just changed).
+  if (voiceModelFor && voiceModelFor !== 'local') {
+    next.cloud[voiceModelFor] = { ...next.cloud[voiceModelFor], model: voiceEl('voice-cloud-model').value.trim() };
+  }
   return next;
 }
 
@@ -1034,11 +1186,6 @@ function showProviderHint(engine) {
   if (info.url) hint.appendChild(keyLink(info.url, 'Get a key →'));
 }
 
-function useProvider(id) {
-  const select = voiceEl('voice-engine');
-  select.value = id;
-  select.dispatchEvent(new Event('change'));
-}
 
 // Builds one editable row per cloud provider: key (hidden by default), model, base URL.
 function renderProviderTable() {
@@ -1086,20 +1233,10 @@ function renderProviderTable() {
     });
     key.cell.classList.add('voice-key-cell');
     key.cell.append(toggle);
-    // Model and base URL share one stacked cell to keep the table narrow.
-    const endpoint = field('model', 'text', 'model');
+    // Models are picked on each feature's own page; this table is keys and endpoints only.
+    const endpoint = field('base_url', 'text', 'https://.../v1');
     endpoint.cell.classList.add('voice-endpoint-cell');
-    endpoint.cell.append(field('base_url', 'text', 'https://.../v1').input);
     row.append(key.cell, endpoint.cell);
-
-    const actionCell = document.createElement('td');
-    const use = document.createElement('button');
-    use.type = 'button';
-    use.className = 'voice-use';
-    use.textContent = 'Use for voice';
-    use.addEventListener('click', () => useProvider(id));
-    actionCell.append(use);
-    row.append(actionCell);
 
     tbody.append(row);
   }
@@ -1111,13 +1248,8 @@ function updateProviderTable() {
   document.querySelectorAll('#voice-provider-rows tr').forEach((row) => {
     const id = row.dataset.provider;
     const config = voiceSettings.cloud[id] || {};
-    const active = voiceSettings.engine === id;
-    row.classList.toggle('active', active);
     row.querySelector('.voice-key-status').textContent = config.api_key ? 'Saved' : 'No key';
     row.querySelector('.voice-key-status').classList.toggle('saved', Boolean(config.api_key));
-    const use = row.querySelector('.voice-use');
-    use.textContent = active ? 'Voice Chat' : 'Use for voice';
-    use.disabled = active;
     row.querySelectorAll('input[data-field]').forEach((input) => {
       if (!input.value && config[input.dataset.field]) input.value = config[input.dataset.field];
     });
@@ -1221,14 +1353,17 @@ async function initVoiceChat() {
   initVocab();
   showProviderHint(voiceSettings.engine);
   showEngineSections();
+  showVoiceModel();
   await loadMicList();
   await refreshEngineStatus();
 
   const engineSelect = voiceEl('voice-engine');
-  engineSelect.addEventListener('change', () => {
+  engineSelect.addEventListener('change', async () => {
     showProviderHint(engineSelect.value);
-    saveVoiceSettings();
+    await saveVoiceSettings(); // saves the old provider's model box first
+    showVoiceModel();
   });
+  voiceEl('voice-cloud-model').addEventListener('change', saveVoiceSettings);
   const otherFields = Object.values(voiceFields).filter((id) => id !== 'voice-engine');
   for (const id of [...otherFields, 'voice-gpu']) {
     voiceEl(id).addEventListener('change', saveVoiceSettings);
