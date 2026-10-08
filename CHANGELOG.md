@@ -1,8 +1,8 @@
-## [1.6.0](https://github.com/[secure]/genshin-utility/compare/v1.5.0...v1.6.0) (2026-10-08)
+## [1.6.0](https://github.com/Deshan-Samarathunga/genshin-utility/compare/v1.5.0...v1.6.0) (2026-10-08)
 
 ### Features
 
-* custom hotkeys and per-feature ai models ([e366c3a](https://github.com/[secure]/genshin-utility/commit/e366c3a5dedca9215c17e5c55eb69d2be9a1035a))
+* custom hotkeys and per-feature ai models ([e366c3a](https://github.com/Deshan-Samarathunga/genshin-utility/commit/e366c3a5dedca9215c17e5c55eb69d2be9a1035a))
 
 ## [1.5.0](https://github.com/Deshan-Samarathunga/genshin-utility/compare/v1.4.0...v1.5.0) (2026-10-07)
 
